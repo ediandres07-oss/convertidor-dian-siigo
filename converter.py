@@ -136,112 +136,143 @@ def _write_headers(ws):
 # LECTURA DE LA HOJA REPORTE
 # ========================================
 
-def _detect_mi_nit(ws, fmt):
+def _detect_format_name(wb_src):
+    """Detecta el nombre de la hoja y el formato ('reporte' o 'nuevo')."""
+    if 'REPORTE' in wb_src.sheetnames:
+        return 'reporte', 'REPORTE'
+    for name in wb_src.sheetnames:
+        if name.startswith('Rp_'):
+            return 'nuevo', name
+    # Fallback: primera hoja
+    name = wb_src.sheetnames[0]
+    return 'nuevo', name
+
+
+def _parse_rows(wb_src):
     """
-    Detecta automáticamente el NIT del negocio (receptor más frecuente,
-    excluyendo NITs genéricos de venta ocasional).
+    Lee todas las filas de la hoja DIAN en un solo paso con iter_rows.
+    Retorna (fmt, mi_nit, filas) donde filas es lista de dicts normalizados.
     """
     from collections import Counter
+    fmt, sheet_name = _detect_format_name(wb_src)
+    ws = wb_src[sheet_name]
+
+    EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
     col_receptor = 8 if fmt == 'reporte' else 12
-    EXCLUIDOS = {'222222222222', '0', '', 'None'}
-    conteo = Counter()
-    for r in range(2, ws.max_row + 1):
-        nit = str(ws.cell(r, col_receptor).value or '').strip()
-        if nit not in EXCLUIDOS:
-            conteo[nit] += 1
-    if not conteo:
-        raise ValueError("No se encontró ningún NIT receptor en el archivo.")
-    return conteo.most_common(1)[0][0]
 
+    conteo_nit = Counter()
+    raw_rows   = []
 
-def _detect_format(wb_src):
-    """
-    Detecta el formato del archivo DIAN.
-    Retorna ('reporte', ws) para el formato antiguo (hoja REPORTE)
-    o ('nuevo', ws) para el formato nuevo (hoja Rp_Doc_XXXXXXXX).
-    """
-    if 'REPORTE' in wb_src.sheetnames:
-        return 'reporte', wb_src['REPORTE']
-    # Buscar hoja con prefijo Rp_Doc_
-    for name in wb_src.sheetnames:
-        if name.startswith('Rp_Doc_') or name.startswith('Rp_'):
-            return 'nuevo', wb_src[name]
-    # Usar la primera hoja como fallback
-    ws = wb_src[wb_src.sheetnames[0]]
-    header = str(ws.cell(1, 1).value or '').strip()
-    if header == 'Tipo de documento':
-        return 'nuevo', ws
-    raise ValueError(
-        f"No se reconoce el formato del archivo. "
-        f"Hojas encontradas: {wb_src.sheetnames}. "
-        f"Se esperaba una hoja llamada 'REPORTE' o 'Rp_Doc_...'."
-    )
-
-
-def read_reporte(wb_src):
-    """Lee el reporte DIAN (formato antiguo o nuevo) y clasifica en tres listas."""
-    fmt, ws = _detect_format(wb_src)
-    mi_nit = _detect_mi_nit(ws, fmt)
-
-    facturas_compras = []
-    facturas_gastos  = []
-    notas_credito    = []
-
-    for row_idx in range(2, ws.max_row + 1):
+    for row in ws.iter_rows(min_row=2, values_only=True):
         if fmt == 'reporte':
-            # Formato antiguo: hoja REPORTE
-            tipo         = ws.cell(row_idx, 1).value
-            folio        = ws.cell(row_idx, 3).value
-            fecha        = ws.cell(row_idx, 5).value
-            nit_emisor   = str(ws.cell(row_idx, 6).value or '').strip()
-            nit_receptor = str(ws.cell(row_idx, 8).value or '').strip()
-            no_gravado   = float(ws.cell(row_idx, 10).value or 0)
-            gravado      = float(ws.cell(row_idx, 11).value or 0)
-            iva          = float(ws.cell(row_idx, 12).value or 0)
-            total        = float(ws.cell(row_idx, 13).value or 0)
+            if len(row) < 13:
+                continue
+            tipo         = row[0]
+            folio        = row[2]
+            fecha        = row[4]
+            nit_emisor   = str(row[5] or '').strip()
+            nit_receptor = str(row[7] or '').strip()
+            no_gravado   = float(row[9]  or 0)
+            gravado      = float(row[10] or 0)
+            iva          = float(row[11] or 0)
+            total        = float(row[12] or 0)
         else:
-            # Formato nuevo: hoja Rp_Doc_XXXXXXXX
-            # Col 1: Tipo, 3: Folio, 8: Fecha Emisión, 10: NIT Emisor,
-            # 12: NIT Receptor, 14: IVA, 30: Total
-            tipo         = ws.cell(row_idx, 1).value
-            folio        = ws.cell(row_idx, 3).value
-            fecha        = ws.cell(row_idx, 8).value
-            nit_emisor   = str(ws.cell(row_idx, 10).value or '').strip()
-            nit_receptor = str(ws.cell(row_idx, 12).value or '').strip()
-            iva          = float(ws.cell(row_idx, 14).value or 0)
-            total        = float(ws.cell(row_idx, 30).value or 0)
-            # Calcular base gravable: iva / 0.19 si iva > 0
-            gravado      = round(iva / 0.19, 2) if iva > 0 else 0.0
-            no_gravado   = round(total - gravado - iva, 2)
-            if no_gravado < 0:
-                no_gravado = 0.0
+            if len(row) < 30:
+                continue
+            tipo         = row[0]
+            folio        = row[2]
+            fecha        = row[7]
+            nit_emisor   = str(row[9]  or '').strip()
+            nit_receptor = str(row[11] or '').strip()
+            iva          = float(row[13] or 0)
+            total        = float(row[29] or 0)
+            gravado      = 0.0
+            no_gravado   = 0.0
 
-        # Solo documentos recibidos por el negocio
+        if nit_receptor not in EXCLUIDOS:
+            conteo_nit[nit_receptor] += 1
+
+        raw_rows.append((tipo, folio, fecha, nit_emisor, nit_receptor,
+                         no_gravado, gravado, iva, total))
+
+    if not conteo_nit:
+        raise ValueError("No se encontró ningún NIT receptor en el archivo.")
+
+    mi_nit = conteo_nit.most_common(1)[0][0]
+
+    # Segunda pasada sobre los datos ya en memoria (lista Python, muy rápida)
+    filas = []
+    for (tipo, folio, fecha, nit_emisor, nit_receptor,
+         no_gravado, gravado, iva, total) in raw_rows:
+
         if nit_receptor != mi_nit:
             continue
         if folio is None:
             continue
 
-        tipo_str = str(tipo or '').lower()
-        if 'nota de crédito' in tipo_str or 'nota de credito' in tipo_str:
-            notas_credito.append({
-                'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
-                'no_gravado': no_gravado, 'gravado': gravado,
-                'iva': iva, 'total': total,
-            })
-        elif nit_emisor == NIT_PROVEEDOR_INVENTARIO:
-            facturas_compras.append({
-                'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
-                'gravado': gravado, 'iva': iva, 'total': total,
-            })
+        if fmt == 'nuevo':
+            # Calcular base a partir de total e iva
+            iva_r      = round(iva, 2)
+            total_r    = round(total, 2)
+            gravado    = round(total_r - iva_r, 2)
+            no_gravado = 0.0
+
+        filas.append({
+            'tipo': str(tipo or '').lower(),
+            'folio': folio, 'fecha': fecha,
+            'nit_emisor': nit_emisor,
+            'no_gravado': no_gravado, 'gravado': gravado,
+            'iva': iva, 'total': total,
+        })
+
+    return fmt, mi_nit, filas
+
+
+def read_reporte(wb_src):
+    """Lee el reporte DIAN y clasifica en facturas_compras, facturas_gastos, notas_credito."""
+    fmt, mi_nit, filas = _parse_rows(wb_src)
+
+    facturas_compras = []
+    facturas_gastos  = []
+    notas_credito    = []
+
+    for f in filas:
+        tipo_str = f['tipo']
+        doc = {
+            'folio': f['folio'], 'fecha': f['fecha'], 'nit': f['nit_emisor'],
+            'no_gravado': f['no_gravado'], 'gravado': f['gravado'],
+            'iva': f['iva'], 'total': f['total'],
+        }
+        if 'nota de cr' in tipo_str:
+            notas_credito.append(doc)
+        elif f['nit_emisor'] == NIT_PROVEEDOR_INVENTARIO:
+            facturas_compras.append(doc)
         else:
-            facturas_gastos.append({
-                'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
-                'no_gravado': no_gravado, 'gravado': gravado,
-                'iva': iva, 'total': total,
-            })
+            facturas_gastos.append(doc)
 
     return facturas_compras, facturas_gastos, notas_credito
+
+
+def _detect_format(wb_src):
+    """Compatibilidad: retorna (fmt, ws) para funciones que aún lo usan."""
+    fmt, sheet_name = _detect_format_name(wb_src)
+    return fmt, wb_src[sheet_name]
+
+
+def _detect_mi_nit(ws, fmt):
+    """Compatibilidad: detecta NIT desde una hoja ya abierta."""
+    from collections import Counter
+    col_receptor = 7 if fmt == 'reporte' else 11  # índice 0-based en iter_rows
+    EXCLUIDOS = {'222222222222', '0', '', 'None'}
+    conteo = Counter()
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if len(row) > col_receptor:
+            nit = str(row[col_receptor] or '').strip()
+            if nit not in EXCLUIDOS:
+                conteo[nit] += 1
+    if not conteo:
+        raise ValueError("No se encontró ningún NIT receptor en el archivo.")
+    return conteo.most_common(1)[0][0]
 
 
 # ========================================
@@ -405,49 +436,68 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
 
 def read_ventas(wb_src):
     """
-    Lee ventas y NC ventas emitidas por el negocio (NIT emisor = mi_nit).
-    Retorna (ventas, nc_ventas) — listas de dicts con folio, fecha, nit_cliente,
-    nombre_cliente, gravado, iva, total.
+    Lee ventas y NC ventas emitidas por el negocio en un solo paso.
+    Retorna (ventas, nc_ventas).
     """
-    fmt, ws = _detect_format(wb_src)
-    mi_nit = _detect_mi_nit(ws, fmt)
+    from collections import Counter
+    fmt, sheet_name = _detect_format_name(wb_src)
+    ws = wb_src[sheet_name]
+
+    EXCLUIDOS = {'222222222222', '0', '', 'None'}
+    col_receptor = 7 if fmt == 'reporte' else 11  # 0-based
+
+    # Primer paso: detectar mi_nit y recolectar filas crudas
+    conteo = Counter()
+    raw = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if fmt == 'reporte':
+            if len(row) < 13: continue
+            nit_receptor = str(row[7] or '').strip()
+        else:
+            if len(row) < 30: continue
+            nit_receptor = str(row[11] or '').strip()
+        if nit_receptor not in EXCLUIDOS:
+            conteo[nit_receptor] += 1
+        raw.append(row)
+
+    if not conteo:
+        raise ValueError("No se encontró ningún NIT receptor.")
+    mi_nit = conteo.most_common(1)[0][0]
 
     ventas    = []
     nc_ventas = []
 
-    for r in range(2, ws.max_row + 1):
+    for row in raw:
         if fmt == 'reporte':
-            tipo          = str(ws.cell(r, 1).value or '').lower()
-            folio         = ws.cell(r, 3).value
-            fecha         = ws.cell(r, 5).value
-            nit_emisor    = str(ws.cell(r, 6).value or '').strip()
-            nit_cliente   = str(ws.cell(r, 8).value or '').strip()
-            nombre_cliente= ''
-            gravado       = float(ws.cell(r, 11).value or 0)
-            iva           = float(ws.cell(r, 12).value or 0)
-            total         = float(ws.cell(r, 13).value or 0)
+            tipo         = str(row[0] or '').lower()
+            folio        = row[2]
+            fecha        = row[4]
+            nit_emisor   = str(row[5] or '').strip()
+            nit_cliente  = str(row[7] or '').strip()
+            nombre       = ''
+            iva          = float(row[11] or 0)
+            total        = float(row[12] or 0)
         else:
-            tipo          = str(ws.cell(r, 1).value or '').lower()
-            folio         = ws.cell(r, 3).value
-            fecha         = ws.cell(r, 8).value
-            nit_emisor    = str(ws.cell(r, 10).value or '').strip()
-            nit_cliente   = str(ws.cell(r, 12).value or '').strip()
-            nombre_cliente= str(ws.cell(r, 13).value or '').strip()
-            iva           = float(ws.cell(r, 14).value or 0)
-            total         = float(ws.cell(r, 30).value or 0)
-            gravado       = round(iva / 0.19, 2) if iva > 0 else 0.0
+            tipo         = str(row[0] or '').lower()
+            folio        = row[2]
+            fecha        = row[7]
+            nit_emisor   = str(row[9]  or '').strip()
+            nit_cliente  = str(row[11] or '').strip()
+            nombre       = str(row[12] or '').strip()
+            iva          = float(row[13] or 0)
+            total        = float(row[29] or 0)
 
-        if nit_emisor != mi_nit:
-            continue
-        if folio is None:
+        if nit_emisor != mi_nit or folio is None:
             continue
 
-        doc = {
-            'folio': folio, 'fecha': fecha,
-            'nit': nit_cliente, 'nombre': nombre_cliente,
-            'gravado': gravado, 'iva': iva, 'total': total,
-        }
-        if 'nota de crédito' in tipo or 'nota de credito' in tipo:
+        iva_r   = round(iva, 2)
+        total_r = round(total, 2)
+        gravado = round(total_r - iva_r, 2)
+
+        doc = {'folio': folio, 'fecha': fecha, 'nit': nit_cliente,
+               'nombre': nombre, 'gravado': gravado, 'iva': iva_r, 'total': total_r}
+
+        if 'nota de cr' in tipo:
             nc_ventas.append(doc)
         elif 'factura' in tipo:
             ventas.append(doc)
@@ -566,12 +616,121 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
 # PUNTO DE ENTRADA PRINCIPAL — PLANOS SIIGO
 # ========================================
 
+def _leer_todo(wb_src):
+    """
+    Lee el archivo DIAN en UN SOLO PASO y devuelve todas las listas necesarias.
+    Evita múltiples iteraciones sobre el mismo archivo grande.
+    """
+    from collections import Counter
+    fmt, sheet_name = _detect_format_name(wb_src)
+    ws = wb_src[sheet_name]
+
+    EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
+
+    # Primera pasada: detectar mi_nit y acumular filas crudas en memoria
+    conteo = Counter()
+    raw = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if fmt == 'reporte':
+            if len(row) < 13: continue
+            nit_receptor = str(row[7] or '').strip()
+        else:
+            if len(row) < 30: continue
+            nit_receptor = str(row[11] or '').strip()
+        if nit_receptor not in EXCLUIDOS:
+            conteo[nit_receptor] += 1
+        raw.append(row)
+
+    if not conteo:
+        raise ValueError("No se encontró ningún NIT receptor en el archivo.")
+    mi_nit = conteo.most_common(1)[0][0]
+
+    # Segunda pasada sobre lista Python (muy rápida, ya en memoria)
+    facturas_compras = []; facturas_gastos = []; notas_credito = []
+    ventas = []; nc_ventas = []
+    base_ventas = 0.0; iva_ventas = 0.0
+    base_nc_ventas = 0.0; iva_nc_ventas = 0.0
+    fechas_venta = []
+
+    for row in raw:
+        if fmt == 'reporte':
+            tipo         = str(row[0] or '').lower()
+            folio        = row[2]
+            fecha        = row[4]
+            nit_emisor   = str(row[5] or '').strip()
+            nit_receptor = str(row[7] or '').strip()
+            no_gravado   = float(row[9]  or 0)
+            gravado_raw  = float(row[10] or 0)
+            iva          = float(row[11] or 0)
+            total        = float(row[12] or 0)
+            nit_cliente  = nit_receptor
+            nombre       = ''
+        else:
+            tipo         = str(row[0] or '').lower()
+            folio        = row[2]
+            fecha        = row[7]
+            nit_emisor   = str(row[9]  or '').strip()
+            nit_receptor = str(row[11] or '').strip()
+            nombre       = str(row[12] or '').strip()
+            iva          = float(row[13] or 0)
+            total        = float(row[29] or 0)
+            no_gravado   = 0.0
+            gravado_raw  = 0.0
+            nit_cliente  = nit_receptor
+
+        iva_r   = round(iva,   2)
+        total_r = round(total, 2)
+        base_r  = round(total_r - iva_r, 2)   # base exacta para balancear
+
+        es_nc      = 'nota de cr' in tipo
+        es_factura = 'factura'    in tipo
+
+        # ── Compras / gastos (recibidos por mi_nit) ──
+        if nit_receptor == mi_nit and folio is not None:
+            if fmt == 'reporte':
+                grav = gravado_raw; nograv = no_gravado
+            else:
+                grav = base_r; nograv = 0.0
+
+            doc = {'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
+                   'no_gravado': nograv, 'gravado': grav, 'iva': iva_r, 'total': total_r}
+
+            if es_nc:
+                notas_credito.append(doc)
+            elif nit_emisor == NIT_PROVEEDOR_INVENTARIO:
+                facturas_compras.append(doc)
+            else:
+                facturas_gastos.append(doc)
+
+        # ── Ventas (emitidas por mi_nit) ──
+        if nit_emisor == mi_nit and folio is not None:
+            vdoc = {'folio': folio, 'fecha': fecha, 'nit': nit_cliente,
+                    'nombre': nombre, 'gravado': base_r, 'iva': iva_r, 'total': total_r}
+            if es_nc:
+                nc_ventas.append(vdoc)
+                base_nc_ventas += base_r; iva_nc_ventas += iva_r
+                if fecha: fechas_venta.append(fecha)
+            elif es_factura:
+                ventas.append(vdoc)
+                base_ventas += base_r; iva_ventas += iva_r
+                if fecha: fechas_venta.append(fecha)
+
+    fecha_ini = min(fechas_venta) if fechas_venta else None
+    fecha_fin = max(fechas_venta) if fechas_venta else None
+
+    return (mi_nit,
+            facturas_compras, facturas_gastos, notas_credito,
+            ventas, nc_ventas,
+            base_ventas, iva_ventas, base_nc_ventas, iva_nc_ventas,
+            fecha_ini, fecha_fin)
+
+
 def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798, consec_ventas=1):
     """Lee el archivo DIAN y genera los planos Siigo (compras, NC, gastos y ventas)."""
-    wb_src = openpyxl.load_workbook(input_stream, data_only=True)
+    wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
 
-    facturas_compras, facturas_gastos, notas_credito = read_reporte(wb_src)
-    ventas, nc_ventas = read_ventas(wb_src)
+    (mi_nit, facturas_compras, facturas_gastos, notas_credito,
+     ventas, nc_ventas, _, _, _, _, _, _) = _leer_todo(wb_src)
 
     wb_dst = Workbook()
     if wb_dst.active:
@@ -595,37 +754,46 @@ def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=
 
 def read_ventas_iva(wb_src):
     """
-    Lee ventas y NC ventas (donde NIT_emisor = NIT del negocio).
-    Soporta formato antiguo (hoja REPORTE) y nuevo (hoja Rp_Doc_...).
+    Lee ventas y NC ventas emitidas por el negocio en un solo paso.
     Retorna (base_ventas, iva_ventas, base_nc_ventas, iva_nc_ventas, fecha_inicio, fecha_fin).
     """
-    fmt, ws = _detect_format(wb_src)
-    mi_nit = _detect_mi_nit(ws, fmt)
-    base_ventas    = 0.0
-    iva_ventas     = 0.0
-    base_nc_ventas = 0.0
-    iva_nc_ventas  = 0.0
+    # Reutiliza _parse_rows que ya hizo el trabajo pesado
+    fmt, mi_nit, filas = _parse_rows(wb_src)
+
+    base_ventas    = 0.0;  iva_ventas     = 0.0
+    base_nc_ventas = 0.0;  iva_nc_ventas  = 0.0
     fechas = []
 
-    for r in range(2, ws.max_row + 1):
-        if fmt == 'reporte':
-            tipo       = str(ws.cell(r, 1).value or '').lower()
-            nit_emisor = str(ws.cell(r, 6).value or '').strip()
-            fecha      = ws.cell(r, 5).value
-            gravado    = float(ws.cell(r, 11).value or 0)
-            iva        = float(ws.cell(r, 12).value or 0)
+    for f in filas:
+        # filas contiene documentos recibidos por mi_nit (compras/gastos)
+        # Para ventas necesitamos documentos EMITIDOS por mi_nit
+        pass
+
+    # Segunda lectura enfocada en emisor = mi_nit
+    fmt2, sheet_name = _detect_format_name(wb_src)
+    ws2 = wb_src[sheet_name]
+    for row in ws2.iter_rows(min_row=2, values_only=True):
+        if fmt2 == 'reporte':
+            if len(row) < 13: continue
+            tipo       = str(row[0] or '').lower()
+            nit_emisor = str(row[5] or '').strip()
+            fecha      = row[4]
+            iva        = float(row[11] or 0)
+            total      = float(row[12] or 0)
         else:
-            tipo       = str(ws.cell(r, 1).value or '').lower()
-            nit_emisor = str(ws.cell(r, 10).value or '').strip()
-            fecha      = ws.cell(r, 8).value
-            iva        = float(ws.cell(r, 14).value or 0)
-            gravado    = round(iva / 0.19, 2) if iva > 0 else 0.0
+            if len(row) < 30: continue
+            tipo       = str(row[0] or '').lower()
+            nit_emisor = str(row[9] or '').strip()
+            fecha      = row[7]
+            iva        = float(row[13] or 0)
+            total      = float(row[29] or 0)
 
         if nit_emisor != mi_nit:
             continue
+        gravado = round(total - iva, 2)
         if fecha:
             fechas.append(fecha)
-        if 'nota de crédito' in tipo or 'nota de credito' in tipo:
+        if 'nota de cr' in tipo:
             base_nc_ventas += gravado
             iva_nc_ventas  += iva
         elif 'factura' in tipo:
@@ -860,16 +1028,11 @@ def generate_liquidacion_iva_file(facturas_compras, facturas_gastos, notas_credi
 
 def process_liquidacion_iva(input_stream):
     """Lee el REPORTE DIAN y genera el archivo de liquidación de IVA."""
-    wb_src = openpyxl.load_workbook(input_stream, data_only=True)
+    wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
 
-    facturas_compras, facturas_gastos, notas_credito = read_reporte(wb_src)
-    (base_ventas, iva_ventas,
-     base_nc_ventas, iva_nc_ventas,
-     fecha_ini, fecha_fin) = read_ventas_iva(wb_src)
-
-    # Detectar NIT del negocio para mostrarlo en el reporte
-    fmt, ws = _detect_format(wb_src)
-    mi_nit = _detect_mi_nit(ws, fmt)
+    (mi_nit, facturas_compras, facturas_gastos, notas_credito,
+     _, _, base_ventas, iva_ventas, base_nc_ventas, iva_nc_ventas,
+     fecha_ini, fecha_fin) = _leer_todo(wb_src)
 
     return generate_liquidacion_iva_file(
         facturas_compras, facturas_gastos, notas_credito,
