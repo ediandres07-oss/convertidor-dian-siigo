@@ -254,41 +254,40 @@ def convert_compras(facturas, wb_dst, consec_inicio):
 
     row_out = 2
 
-    # Bloque 1: cuenta por cobrar cartera (crédito — CxP proveedor)
-    consec = consec_inicio
+    # Pre-calcular para garantizar balance: deb_mercancia + deb_iva = cred_cxp
+    fact_calc = []
     for f in facturas:
-        row = make_row(9, consec, f['fecha'], '14350103', f['nit'], None,
-                       f"FC: {f['folio']}", 0, 0)
-        for col, val in enumerate(row, 1):
-            ws_dst.cell(row=row_out, column=col, value=val)
-        row_out += 1
-        consec += 1
+        cred_cxp     = round(f['total'], 2)
+        deb_iva      = round(f['iva'], 2)
+        deb_mercancia = round(cred_cxp - deb_iva, 2)   # total - iva = base exacta
+        fact_calc.append({**f, 'deb_mercancia': deb_mercancia,
+                          'deb_iva': deb_iva, 'cred_cxp': cred_cxp})
 
-    # Bloque 2: mercancía gravada (débito)
+    # Bloque 1: mercancía gravada (débito)
     consec = consec_inicio
-    for f in facturas:
+    for f in fact_calc:
         row = make_row(9, consec, f['fecha'], '14350101', f['nit'], None,
-                       f"FC: {f['folio']}", f['gravado'], 0)
+                       f"FC: {f['folio']}", f['deb_mercancia'], 0)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
         consec += 1
 
-    # Bloque 3: IVA descontable (débito)
+    # Bloque 2: IVA descontable (débito)
     consec = consec_inicio
-    for f in facturas:
+    for f in fact_calc:
         row = make_row(9, consec, f['fecha'], '24081001', f['nit'], 1,
-                       f"FC: {f['folio']}", f['iva'], 0)
+                       f"FC: {f['folio']}", f['deb_iva'], 0)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
         consec += 1
 
-    # Bloque 4: CxP proveedor (crédito)
+    # Bloque 3: CxP proveedor (crédito = suma exacta de débitos)
     consec = consec_inicio
-    for f in facturas:
+    for f in fact_calc:
         row = make_row(9, consec, f['fecha'], '22050501', f['nit'], None,
-                       f"FC: {f['folio']}", 0, f['total'])
+                       f"FC: {f['folio']}", 0, f['cred_cxp'])
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
@@ -306,38 +305,40 @@ def convert_nc_compras(notas, wb_dst, consec_inicio):
 
     row_out = 2
 
-    consec = consec_inicio
+    # Pre-calcular para garantizar balance: deb_22050501 = cred_14350101 + cred_24081002
+    notas_calc = []
     for n in notas:
-        credito_14350103 = n['no_gravado'] if n['no_gravado'] > 0 and n['gravado'] == 0 else 0
-        row = make_row(10, consec, n['fecha'], '14350103', n['nit'], None,
-                       f"NC: {n['folio']}", 0, credito_14350103)
-        for col, val in enumerate(row, 1):
-            ws_dst.cell(row=row_out, column=col, value=val)
-        row_out += 1
-        consec += 1
+        deb_cxp      = round(n['total'], 2)
+        cred_iva     = round(n['iva'], 2)
+        cred_mercancia = round(deb_cxp - cred_iva, 2)   # total - iva = base exacta
+        notas_calc.append({**n, 'deb_cxp': deb_cxp,
+                           'cred_mercancia': cred_mercancia, 'cred_iva': cred_iva})
 
+    # Bloque 1: mercancía (crédito)
     consec = consec_inicio
-    for n in notas:
+    for n in notas_calc:
         row = make_row(10, consec, n['fecha'], '14350101', n['nit'], None,
-                       f"NC: {n['folio']}", 0, n['gravado'])
+                       f"NC: {n['folio']}", 0, n['cred_mercancia'])
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
         consec += 1
 
+    # Bloque 2: IVA descontable NC (crédito)
     consec = consec_inicio
-    for n in notas:
+    for n in notas_calc:
         row = make_row(10, consec, n['fecha'], '24081002', n['nit'], 1,
-                       f"NC: {n['folio']}", 0, n['iva'])
+                       f"NC: {n['folio']}", 0, n['cred_iva'])
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
         consec += 1
 
+    # Bloque 3: CxP proveedor (débito = suma exacta de créditos)
     consec = consec_inicio
-    for n in notas:
+    for n in notas_calc:
         row = make_row(10, consec, n['fecha'], '22050501', n['nit'], None,
-                       f"NC: {n['folio']}", n['total'], 0)
+                       f"NC: {n['folio']}", n['deb_cxp'], 0)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
@@ -352,15 +353,24 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
 
     row_out = 2
 
-    # Bloque 1: cuenta de gasto (débito)
-    consec = consec_inicio
+    # Pre-calcular débitos redondeados para garantizar balance exacto
+    gastos_calc = []
     for g in gastos:
         nit_str = str(g['nit'])
-        cuenta, _, _ = NIT_DETAIL_MAP.get(nit_str,
-                       (DEFAULT_CUENTA_GASTO, DEFAULT_IVA_CUENTA, DEFAULT_COD_IMP))
-        debito_gasto = int(g['gravado'] + g['no_gravado'])
-        row = make_row(12, consec, g['fecha'], cuenta, g['nit'], None,
-                       f"G: {g['folio']}", debito_gasto, 0)
+        cuenta, cuenta_iva, cod_imp = NIT_DETAIL_MAP.get(
+            nit_str, (DEFAULT_CUENTA_GASTO, DEFAULT_IVA_CUENTA, DEFAULT_COD_IMP))
+        deb_gasto = round(g['gravado'] + g['no_gravado'], 2)
+        deb_iva   = round(g['iva'], 2)
+        cred_cxp  = round(deb_gasto + deb_iva, 2)   # crédito = suma exacta de débitos
+        gastos_calc.append({**g, 'cuenta': cuenta, 'cuenta_iva': cuenta_iva,
+                            'cod_imp': cod_imp, 'deb_gasto': deb_gasto,
+                            'deb_iva': deb_iva, 'cred_cxp': cred_cxp})
+
+    # Bloque 1: cuenta de gasto (débito)
+    consec = consec_inicio
+    for g in gastos_calc:
+        row = make_row(12, consec, g['fecha'], g['cuenta'], g['nit'], None,
+                       f"G: {g['folio']}", g['deb_gasto'], 0)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
@@ -368,22 +378,19 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
 
     # Bloque 2: IVA descontable (débito)
     consec = consec_inicio
-    for g in gastos:
-        nit_str = str(g['nit'])
-        _, cuenta_iva, cod_imp = NIT_DETAIL_MAP.get(nit_str,
-                                 (DEFAULT_CUENTA_GASTO, DEFAULT_IVA_CUENTA, DEFAULT_COD_IMP))
-        row = make_row(12, consec, g['fecha'], cuenta_iva, g['nit'], cod_imp,
-                       f"G: {g['folio']}", int(g['iva']), 0)
+    for g in gastos_calc:
+        row = make_row(12, consec, g['fecha'], g['cuenta_iva'], g['nit'], g['cod_imp'],
+                       f"G: {g['folio']}", g['deb_iva'], 0)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
         consec += 1
 
-    # Bloque 3: CxP proveedor (crédito)
+    # Bloque 3: CxP proveedor (crédito = suma exacta de débitos)
     consec = consec_inicio
-    for g in gastos:
+    for g in gastos_calc:
         row = make_row(12, consec, g['fecha'], '23359501', g['nit'], None,
-                       f"G: {g['folio']}", 0, int(g['total']))
+                       f"G: {g['folio']}", 0, g['cred_cxp'])
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
@@ -513,10 +520,18 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
     # Filtrar NITs con total > 0
     clientes = [(nit, d) for nit, d in consolidado.items() if abs(d['total']) > 0.01]
 
+    # Pre-calcular créditos para garantizar balance exacto por consecutivo
+    # débito CxC = total; crédito ingreso = total - iva; crédito IVA = iva
+    clientes_calc = []
+    for nit, d in clientes:
+        cred_iva     = round(d['iva'], 2)
+        cred_ingreso = round(d['total'], 2) - cred_iva   # garantiza débito = crédito1 + crédito2
+        clientes_calc.append((nit, d, cred_ingreso, cred_iva))
+
     consec = consec_inicio
 
     # Bloque 1: CxC clientes (débito)
-    for nit, d in clientes:
+    for nit, d, _, _ in clientes_calc:
         row = make_row(1, consec, d['fecha'], '13050501', nit, None,
                        'VENTA CONSOLIDADA', round(d['total'], 2), 0)
         for col, val in enumerate(row, 1):
@@ -524,11 +539,11 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
-    # Bloque 2: Ingresos por ventas (crédito)
+    # Bloque 2: Ingresos por ventas (crédito = total - iva)
     consec = consec_inicio
-    for nit, d in clientes:
+    for nit, d, cred_ingreso, _ in clientes_calc:
         row = make_row(1, consec, d['fecha'], '41009501', nit, None,
-                       'VENTA CONSOLIDADA', 0, round(d['gravado'], 2))
+                       'VENTA CONSOLIDADA', 0, cred_ingreso)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
@@ -536,9 +551,9 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
 
     # Bloque 3: IVA generado (crédito)
     consec = consec_inicio
-    for nit, d in clientes:
+    for nit, d, _, cred_iva in clientes_calc:
         row = make_row(1, consec, d['fecha'], '24080501', nit, 1,
-                       'VENTA CONSOLIDADA', 0, round(d['iva'], 2))
+                       'VENTA CONSOLIDADA', 0, cred_iva)
         for col, val in enumerate(row, 1):
             ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
