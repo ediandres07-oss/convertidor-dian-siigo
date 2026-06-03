@@ -393,14 +393,170 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
 
 
 # ========================================
+# LECTURA DE VENTAS
+# ========================================
+
+def read_ventas(wb_src):
+    """
+    Lee ventas y NC ventas emitidas por el negocio (NIT emisor = mi_nit).
+    Retorna (ventas, nc_ventas) — listas de dicts con folio, fecha, nit_cliente,
+    nombre_cliente, gravado, iva, total.
+    """
+    fmt, ws = _detect_format(wb_src)
+    mi_nit = _detect_mi_nit(ws, fmt)
+
+    ventas    = []
+    nc_ventas = []
+
+    for r in range(2, ws.max_row + 1):
+        if fmt == 'reporte':
+            tipo          = str(ws.cell(r, 1).value or '').lower()
+            folio         = ws.cell(r, 3).value
+            fecha         = ws.cell(r, 5).value
+            nit_emisor    = str(ws.cell(r, 6).value or '').strip()
+            nit_cliente   = str(ws.cell(r, 8).value or '').strip()
+            nombre_cliente= ''
+            gravado       = float(ws.cell(r, 11).value or 0)
+            iva           = float(ws.cell(r, 12).value or 0)
+            total         = float(ws.cell(r, 13).value or 0)
+        else:
+            tipo          = str(ws.cell(r, 1).value or '').lower()
+            folio         = ws.cell(r, 3).value
+            fecha         = ws.cell(r, 8).value
+            nit_emisor    = str(ws.cell(r, 10).value or '').strip()
+            nit_cliente   = str(ws.cell(r, 12).value or '').strip()
+            nombre_cliente= str(ws.cell(r, 13).value or '').strip()
+            iva           = float(ws.cell(r, 14).value or 0)
+            total         = float(ws.cell(r, 30).value or 0)
+            gravado       = round(iva / 0.19, 2) if iva > 0 else 0.0
+
+        if nit_emisor != mi_nit:
+            continue
+        if folio is None:
+            continue
+
+        doc = {
+            'folio': folio, 'fecha': fecha,
+            'nit': nit_cliente, 'nombre': nombre_cliente,
+            'gravado': gravado, 'iva': iva, 'total': total,
+        }
+        if 'nota de crédito' in tipo or 'nota de credito' in tipo:
+            nc_ventas.append(doc)
+        elif 'factura' in tipo:
+            ventas.append(doc)
+
+    return ventas, nc_ventas
+
+
+def sheet_venta_nc_ventas(ventas, nc_ventas, wb_dst):
+    """Crea la hoja VENTA Y NC VENTAS con detalle completo."""
+    ws = wb_dst.create_sheet('VENTA Y NC VENTAS')
+
+    # Encabezados
+    headers = ['Tipo', 'Folio', 'Fecha', 'NIT/Cédula Cliente',
+               'Nombre Cliente', 'Base Gravable', 'IVA', 'Total']
+    for col, h in enumerate(headers, 1):
+        ws.cell(row=1, column=col, value=h)
+
+    row_out = 2
+    for v in ventas:
+        ws.cell(row_out, 1, 'VENTA')
+        ws.cell(row_out, 2, v['folio'])
+        ws.cell(row_out, 3, v['fecha'])
+        ws.cell(row_out, 4, v['nit'])
+        ws.cell(row_out, 5, v['nombre'])
+        ws.cell(row_out, 6, v['gravado'])
+        ws.cell(row_out, 7, v['iva'])
+        ws.cell(row_out, 8, v['total'])
+        row_out += 1
+
+    for n in nc_ventas:
+        ws.cell(row_out, 1, 'NC VENTA')
+        ws.cell(row_out, 2, n['folio'])
+        ws.cell(row_out, 3, n['fecha'])
+        ws.cell(row_out, 4, n['nit'])
+        ws.cell(row_out, 5, n['nombre'])
+        ws.cell(row_out, 6, -n['gravado'])
+        ws.cell(row_out, 7, -n['iva'])
+        ws.cell(row_out, 8, -n['total'])
+        row_out += 1
+
+
+def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
+    """
+    Genera la hoja VENTAS con el plano Siigo consolidado por NIT cliente.
+    Cada NIT cliente → una fila por bloque contable (CxC, Ingresos, IVA).
+    """
+    from collections import defaultdict
+
+    ws_dst = wb_dst.create_sheet('VENTAS')
+    _write_headers(ws_dst)
+    row_out = 2
+
+    # Consolidar ventas por NIT cliente
+    consolidado = defaultdict(lambda: {'gravado': 0.0, 'iva': 0.0, 'total': 0.0, 'fecha': None})
+    for v in ventas:
+        k = str(v['nit'])
+        consolidado[k]['gravado'] += v['gravado']
+        consolidado[k]['iva']     += v['iva']
+        consolidado[k]['total']   += v['total']
+        if consolidado[k]['fecha'] is None:
+            consolidado[k]['fecha'] = v['fecha']
+
+    # Restar NC ventas por NIT cliente
+    for n in nc_ventas:
+        k = str(n['nit'])
+        consolidado[k]['gravado'] -= n['gravado']
+        consolidado[k]['iva']     -= n['iva']
+        consolidado[k]['total']   -= n['total']
+
+    # Filtrar NITs con total > 0
+    clientes = [(nit, d) for nit, d in consolidado.items() if abs(d['total']) > 0.01]
+
+    consec = consec_inicio
+
+    # Bloque 1: CxC clientes (débito)
+    for nit, d in clientes:
+        row = make_row(1, consec, d['fecha'], '13050501', nit, None,
+                       'VENTA CONSOLIDADA', round(d['total'], 2), 0)
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
+        row_out += 1
+        consec += 1
+
+    # Bloque 2: Ingresos por ventas (crédito)
+    consec = consec_inicio
+    for nit, d in clientes:
+        row = make_row(1, consec, d['fecha'], '41009501', nit, None,
+                       'VENTA CONSOLIDADA', 0, round(d['gravado'], 2))
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
+        row_out += 1
+        consec += 1
+
+    # Bloque 3: IVA generado (crédito)
+    consec = consec_inicio
+    for nit, d in clientes:
+        row = make_row(1, consec, d['fecha'], '24080501', nit, 1,
+                       'VENTA CONSOLIDADA', 0, round(d['iva'], 2))
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
+        row_out += 1
+        consec += 1
+
+    return consec_inicio + len(clientes)
+
+
+# ========================================
 # PUNTO DE ENTRADA PRINCIPAL — PLANOS SIIGO
 # ========================================
 
-def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798):
-    """Lee el archivo DIAN (solo hoja REPORTE) y genera los tres planos Siigo."""
+def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798, consec_ventas=1):
+    """Lee el archivo DIAN y genera los planos Siigo (compras, NC, gastos y ventas)."""
     wb_src = openpyxl.load_workbook(input_stream, data_only=True)
 
     facturas_compras, facturas_gastos, notas_credito = read_reporte(wb_src)
+    ventas, nc_ventas = read_ventas(wb_src)
 
     wb_dst = Workbook()
     if wb_dst.active:
@@ -409,6 +565,8 @@ def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=
     convert_compras(facturas_compras, wb_dst, consec_compras)
     convert_nc_compras(notas_credito, wb_dst, consec_nc)
     convert_gastos(facturas_gastos, wb_dst, consec_gastos)
+    sheet_venta_nc_ventas(ventas, nc_ventas, wb_dst)
+    convert_ventas(ventas, nc_ventas, wb_dst, consec_ventas)
 
     output_stream = io.BytesIO()
     wb_dst.save(output_stream)
