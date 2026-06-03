@@ -4,6 +4,7 @@ import traceback
 from converter import process_file, process_liquidacion_iva
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 
 @app.route('/')
 def index():
