@@ -670,7 +670,7 @@ def _apply_cell(ws, row, col, value, bold=False, fill_hex=None, number_format=No
 def generate_liquidacion_iva_file(facturas_compras, facturas_gastos, notas_credito,
                                   base_ventas, iva_ventas,
                                   base_nc_ventas, iva_nc_ventas,
-                                  fecha_inicio, fecha_fin):
+                                  fecha_inicio, fecha_fin, mi_nit=''):
     """Genera un Excel con una hoja RESUMEN de liquidación de IVA."""
 
     # ── Cálculos ────────────────────────────────────────────────────────────
@@ -735,7 +735,7 @@ def generate_liquidacion_iva_file(facturas_compras, facturas_gastos, notas_credi
 
     ws.merge_cells('A2:D2')
     p = ws['A2']
-    p.value = f'Período: {periodo}   |   NIT: {MI_NIT}'
+    p.value = f'Período: {periodo}   |   NIT: {mi_nit}'
     p.font = Font(italic=True, color='FFFFFF', size=10)
     p.fill = PatternFill(fill_type='solid', fgColor=C_AZUL_MED)
     p.alignment = Alignment(horizontal='center', vertical='center')
@@ -867,9 +867,14 @@ def process_liquidacion_iva(input_stream):
      base_nc_ventas, iva_nc_ventas,
      fecha_ini, fecha_fin) = read_ventas_iva(wb_src)
 
+    # Detectar NIT del negocio para mostrarlo en el reporte
+    fmt, ws = _detect_format(wb_src)
+    mi_nit = _detect_mi_nit(ws, fmt)
+
     return generate_liquidacion_iva_file(
         facturas_compras, facturas_gastos, notas_credito,
         base_ventas, iva_ventas,
         base_nc_ventas, iva_nc_ventas,
         fecha_ini, fecha_fin,
+        mi_nit=mi_nit,
     )
