@@ -505,43 +505,76 @@ def read_ventas(wb_src):
     return ventas, nc_ventas
 
 
-def sheet_venta_nc_ventas(ventas, nc_ventas, wb_dst):
-    """Crea la hoja VENTA Y NC VENTAS con detalle completo."""
-    ws = wb_dst.create_sheet('VENTA Y NC VENTAS')
+def convert_nc_ventas(nc_ventas, wb_dst, consec_inicio):
+    """
+    Genera la hoja NC VENTAS con el plano Siigo consolidado por NIT cliente.
+    Entradas inversas a VENTAS:
+      Débito  41009501 (Ingresos)
+      Débito  24080501 (IVA generado)
+      Crédito 13050501 (CxC clientes)
+    """
+    from collections import defaultdict
 
-    # Encabezados
-    headers = ['Tipo', 'Folio', 'Fecha', 'NIT/Cédula Cliente',
-               'Nombre Cliente', 'Base Gravable', 'IVA', 'Total']
-    for col, h in enumerate(headers, 1):
-        ws.cell(row=1, column=col, value=h)
-
+    ws_dst = wb_dst.create_sheet('NC VENTAS')
+    _write_headers(ws_dst)
     row_out = 2
-    for v in ventas:
-        ws.cell(row_out, 1, 'VENTA')
-        ws.cell(row_out, 2, v['folio'])
-        ws.cell(row_out, 3, v['fecha'])
-        ws.cell(row_out, 4, v['nit'])
-        ws.cell(row_out, 5, v['nombre'])
-        ws.cell(row_out, 6, v['gravado'])
-        ws.cell(row_out, 7, v['iva'])
-        ws.cell(row_out, 8, v['total'])
-        row_out += 1
 
+    consolidado = defaultdict(lambda: {'iva': 0.0, 'total': 0.0, 'fecha': None})
     for n in nc_ventas:
-        ws.cell(row_out, 1, 'NC VENTA')
-        ws.cell(row_out, 2, n['folio'])
-        ws.cell(row_out, 3, n['fecha'])
-        ws.cell(row_out, 4, n['nit'])
-        ws.cell(row_out, 5, n['nombre'])
-        ws.cell(row_out, 6, -n['gravado'])
-        ws.cell(row_out, 7, -n['iva'])
-        ws.cell(row_out, 8, -n['total'])
+        k = str(n['nit'])
+        consolidado[k]['iva']   += n['iva']
+        consolidado[k]['total'] += n['total']
+        if consolidado[k]['fecha'] is None:
+            consolidado[k]['fecha'] = n['fecha']
+
+    clientes = [(nit, d) for nit, d in consolidado.items() if abs(d['total']) > 0.01]
+
+    # Pre-calcular para balance exacto: deb_ingreso + deb_iva = cred_cxc
+    calc = []
+    for nit, d in clientes:
+        deb_iva     = round(d['iva'], 2)
+        cred_cxc    = round(d['total'], 2)
+        deb_ingreso = round(cred_cxc - deb_iva, 2)
+        calc.append((nit, d, deb_ingreso, deb_iva, cred_cxc))
+
+    consec = consec_inicio
+
+    # Bloque 1: Ingresos (débito — reversa de venta)
+    for nit, d, deb_ingreso, _, _ in calc:
+        row = make_row(2, consec, d['fecha'], '41009501', nit, None,
+                       'NC VENTA CONSOLIDADA', deb_ingreso, 0)
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
         row_out += 1
+        consec += 1
+
+    # Bloque 2: IVA generado (débito — reversa)
+    consec = consec_inicio
+    for nit, d, _, deb_iva, _ in calc:
+        row = make_row(2, consec, d['fecha'], '24080501', nit, 1,
+                       'NC VENTA CONSOLIDADA', deb_iva, 0)
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
+        row_out += 1
+        consec += 1
+
+    # Bloque 3: CxC clientes (crédito = suma exacta de débitos)
+    consec = consec_inicio
+    for nit, d, _, _, cred_cxc in calc:
+        row = make_row(2, consec, d['fecha'], '13050501', nit, None,
+                       'NC VENTA CONSOLIDADA', 0, cred_cxc)
+        for col, val in enumerate(row, 1):
+            ws_dst.cell(row=row_out, column=col, value=val)
+        row_out += 1
+        consec += 1
+
+    return consec_inicio + len(calc)
 
 
 def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
     """
     Genera la hoja VENTAS con el plano Siigo consolidado por NIT cliente.
+    Solo facturas de venta (las NC van en hoja NC VENTAS separada).
     Cada NIT cliente → una fila por bloque contable (CxC, Ingresos, IVA).
     """
     from collections import defaultdict
@@ -550,32 +583,23 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
     _write_headers(ws_dst)
     row_out = 2
 
-    # Consolidar ventas por NIT cliente
-    consolidado = defaultdict(lambda: {'gravado': 0.0, 'iva': 0.0, 'total': 0.0, 'fecha': None})
+    # Consolidar solo facturas de venta por NIT cliente (sin restar NC)
+    consolidado = defaultdict(lambda: {'iva': 0.0, 'total': 0.0, 'fecha': None})
     for v in ventas:
         k = str(v['nit'])
-        consolidado[k]['gravado'] += v['gravado']
-        consolidado[k]['iva']     += v['iva']
-        consolidado[k]['total']   += v['total']
+        consolidado[k]['iva']   += v['iva']
+        consolidado[k]['total'] += v['total']
         if consolidado[k]['fecha'] is None:
             consolidado[k]['fecha'] = v['fecha']
-
-    # Restar NC ventas por NIT cliente
-    for n in nc_ventas:
-        k = str(n['nit'])
-        consolidado[k]['gravado'] -= n['gravado']
-        consolidado[k]['iva']     -= n['iva']
-        consolidado[k]['total']   -= n['total']
 
     # Filtrar NITs con total > 0
     clientes = [(nit, d) for nit, d in consolidado.items() if abs(d['total']) > 0.01]
 
-    # Pre-calcular créditos para garantizar balance exacto por consecutivo
-    # débito CxC = total; crédito ingreso = total - iva; crédito IVA = iva
+    # Pre-calcular para balance exacto: deb_cxc = cred_ingreso + cred_iva
     clientes_calc = []
     for nit, d in clientes:
         cred_iva     = round(d['iva'], 2)
-        cred_ingreso = round(d['total'], 2) - cred_iva   # garantiza débito = crédito1 + crédito2
+        cred_ingreso = round(d['total'], 2) - cred_iva
         clientes_calc.append((nit, d, cred_ingreso, cred_iva))
 
     consec = consec_inicio
@@ -725,7 +749,7 @@ def _leer_todo(wb_src):
             fecha_ini, fecha_fin)
 
 
-def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798, consec_ventas=1):
+def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798, consec_ventas=1, consec_nc_ventas=1):
     """Lee el archivo DIAN y genera los planos Siigo (compras, NC, gastos y ventas)."""
     wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
 
@@ -739,8 +763,8 @@ def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=
     convert_compras(facturas_compras, wb_dst, consec_compras)
     convert_nc_compras(notas_credito, wb_dst, consec_nc)
     convert_gastos(facturas_gastos, wb_dst, consec_gastos)
-    sheet_venta_nc_ventas(ventas, nc_ventas, wb_dst)
     convert_ventas(ventas, nc_ventas, wb_dst, consec_ventas)
+    convert_nc_ventas(nc_ventas, wb_dst, consec_nc_ventas)
 
     output_stream = io.BytesIO()
     wb_dst.save(output_stream)

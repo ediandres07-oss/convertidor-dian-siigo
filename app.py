@@ -23,7 +23,8 @@ def convert():
         consec_compras = int(request.form.get('consec_compras', 371))
         consec_nc = int(request.form.get('consec_nc', 271))
         consec_gastos = int(request.form.get('consec_gastos', 798))
-        consec_ventas = int(request.form.get('consec_ventas', 1))
+        consec_ventas    = int(request.form.get('consec_ventas', 1))
+        consec_nc_ventas = int(request.form.get('consec_nc_ventas', 1))
     except ValueError:
         return {'error': 'Los consecutivos deben ser números válidos'}, 400
 
@@ -37,7 +38,8 @@ def convert():
             consec_compras=consec_compras,
             consec_nc=consec_nc,
             consec_gastos=consec_gastos,
-            consec_ventas=consec_ventas
+            consec_ventas=consec_ventas,
+            consec_nc_ventas=consec_nc_ventas
         )
         
         # Devolver el archivo convertido
