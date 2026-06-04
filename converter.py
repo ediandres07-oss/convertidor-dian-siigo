@@ -232,6 +232,10 @@ def _parse_rows(wb_src):
     ws = wb_src[sheet_name]
 
     EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
+
+    def _es_nit_valido(v):
+        """Un NIT válido es solo dígitos, entre 6 y 15 caracteres."""
+        return v.isdigit() and 6 <= len(v) <= 15
     col_receptor = 8 if fmt == 'reporte' else 12
 
     conteo_nit = Counter()
@@ -263,7 +267,7 @@ def _parse_rows(wb_src):
             gravado      = 0.0
             no_gravado   = 0.0
 
-        if nit_receptor not in EXCLUIDOS:
+        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
             conteo_nit[nit_receptor] += 1
 
         raw_rows.append((tipo, folio, fecha, nit_emisor, nit_receptor,
@@ -342,7 +346,7 @@ def _detect_mi_nit(ws, fmt):
     for row in ws.iter_rows(min_row=2, values_only=True):
         if len(row) > col_receptor:
             nit = str(row[col_receptor] or '').strip()
-            if nit not in EXCLUIDOS:
+            if nit not in EXCLUIDOS and nit.isdigit() and 6 <= len(nit) <= 15:
                 conteo[nit] += 1
     if not conteo:
         raise ValueError("No se encontró ningún NIT receptor en el archivo.")
@@ -530,7 +534,7 @@ def read_ventas(wb_src):
         else:
             if len(row) < 30: continue
             nit_receptor = str(row[11] or '').strip()
-        if nit_receptor not in EXCLUIDOS:
+        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
             conteo[nit_receptor] += 1
         raw.append(row)
 
@@ -725,6 +729,10 @@ def _leer_todo(wb_src):
 
     EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
 
+    def _es_nit_valido(v):
+        """Un NIT válido es solo dígitos, entre 6 y 15 caracteres."""
+        return v.isdigit() and 6 <= len(v) <= 15
+
     # Primera pasada: detectar mi_nit y acumular filas crudas en memoria
     conteo = Counter()
     raw = []
@@ -735,7 +743,7 @@ def _leer_todo(wb_src):
         else:
             if len(row) < 30: continue
             nit_receptor = str(row[11] or '').strip()
-        if nit_receptor not in EXCLUIDOS:
+        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
             conteo[nit_receptor] += 1
         raw.append(row)
 
