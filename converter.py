@@ -167,6 +167,16 @@ DEFAULT_COD_IMP      = 1
 
 # ========================================
 # ENCABEZADOS DEL PLANO SIIGO
+def _n(val):
+    """Convierte a float de forma segura; devuelve 0.0 si no es numérico."""
+    if val is None:
+        return 0.0
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 # ========================================
 HEADERS = [
     'Tipo de comprobante', 'Consecutivo comprobante', 'Fecha de elaboración ',
@@ -236,10 +246,10 @@ def _parse_rows(wb_src):
             fecha        = row[4]
             nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
-            no_gravado   = float(row[9]  or 0)
-            gravado      = float(row[10] or 0)
-            iva          = float(row[11] or 0)
-            total        = float(row[12] or 0)
+            no_gravado   = _n(row[9])
+            gravado      = _n(row[10])
+            iva          = _n(row[11])
+            total        = _n(row[12])
         else:
             if len(row) < 30:
                 continue
@@ -248,8 +258,8 @@ def _parse_rows(wb_src):
             fecha        = row[7]
             nit_emisor   = str(row[9]  or '').strip()
             nit_receptor = str(row[11] or '').strip()
-            iva          = float(row[13] or 0)
-            total        = float(row[29] or 0)
+            iva          = _n(row[13])
+            total        = _n(row[29])
             gravado      = 0.0
             no_gravado   = 0.0
 
@@ -539,8 +549,8 @@ def read_ventas(wb_src):
             nit_emisor   = str(row[5] or '').strip()
             nit_cliente  = str(row[7] or '').strip()
             nombre       = ''
-            iva          = float(row[11] or 0)
-            total        = float(row[12] or 0)
+            iva          = _n(row[11])
+            total        = _n(row[12])
         else:
             tipo         = str(row[0] or '').lower()
             folio        = row[2]
@@ -548,8 +558,8 @@ def read_ventas(wb_src):
             nit_emisor   = str(row[9]  or '').strip()
             nit_cliente  = str(row[11] or '').strip()
             nombre       = str(row[12] or '').strip()
-            iva          = float(row[13] or 0)
-            total        = float(row[29] or 0)
+            iva          = _n(row[13])
+            total        = _n(row[29])
 
         if nit_emisor != mi_nit or folio is None:
             continue
@@ -747,10 +757,10 @@ def _leer_todo(wb_src):
             fecha        = row[4]
             nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
-            no_gravado   = float(row[9]  or 0)
-            gravado_raw  = float(row[10] or 0)
-            iva          = float(row[11] or 0)
-            total        = float(row[12] or 0)
+            no_gravado   = _n(row[9])
+            gravado_raw  = _n(row[10])
+            iva          = _n(row[11])
+            total        = _n(row[12])
             nit_cliente  = nit_receptor
             nombre       = ''
         else:
@@ -760,8 +770,8 @@ def _leer_todo(wb_src):
             nit_emisor   = str(row[9]  or '').strip()
             nit_receptor = str(row[11] or '').strip()
             nombre       = str(row[12] or '').strip()
-            iva          = float(row[13] or 0)
-            total        = float(row[29] or 0)
+            iva          = _n(row[13])
+            total        = _n(row[29])
             no_gravado   = 0.0
             gravado_raw  = 0.0
             nit_cliente  = nit_receptor
@@ -866,15 +876,15 @@ def read_ventas_iva(wb_src):
             tipo       = str(row[0] or '').lower()
             nit_emisor = str(row[5] or '').strip()
             fecha      = row[4]
-            iva        = float(row[11] or 0)
-            total      = float(row[12] or 0)
+            iva        = _n(row[11])
+            total      = _n(row[12])
         else:
             if len(row) < 30: continue
             tipo       = str(row[0] or '').lower()
             nit_emisor = str(row[9] or '').strip()
             fecha      = row[7]
-            iva        = float(row[13] or 0)
-            total      = float(row[29] or 0)
+            iva        = _n(row[13])
+            total      = _n(row[29])
 
         if nit_emisor != mi_nit:
             continue
