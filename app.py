@@ -1,7 +1,8 @@
 from flask import Flask, request, send_file, render_template
 import io
 import traceback
-from converter import process_file, process_liquidacion_iva
+from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina
+from openpyxl import Workbook
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -81,6 +82,51 @@ def liquidar_iva():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error generando liquidación: {str(e)}'}, 500
+
+
+@app.route('/api/nomina', methods=['POST'])
+def nomina():
+    if 'balance' not in request.files:
+        return {'error': 'Se requiere el archivo de Balance de prueba por tercero'}, 400
+
+    balance_file = request.files['balance']
+    if balance_file.filename == '':
+        return {'error': 'Archivo de balance no seleccionado'}, 400
+
+    try:
+        consec_nomina = int(request.form.get('consec_nomina', 1))
+    except ValueError:
+        return {'error': 'El consecutivo debe ser un número válido'}, 400
+
+    try:
+        import tempfile, os
+        # Guardar balance en archivo temporal (openpyxl necesita path real para read_only)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            balance_file.save(tmp)
+            tmp_path = tmp.name
+
+        empleados = _cargar_nomina_balance(tmp_path)
+        os.unlink(tmp_path)
+
+        wb_dst = Workbook()
+        if wb_dst.active:
+            wb_dst.remove(wb_dst.active)
+
+        convert_nomina(empleados, wb_dst, consec_nomina)
+
+        output_stream = io.BytesIO()
+        wb_dst.save(output_stream)
+        output_stream.seek(0)
+
+        return send_file(
+            output_stream,
+            as_attachment=True,
+            download_name='PLANO_NOMINA.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error generando nómina: {str(e)}'}, 500
 
 
 if __name__ == '__main__':

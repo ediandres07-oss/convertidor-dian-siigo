@@ -247,6 +247,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ── Nómina ──────────────────────────────────────────────────────────────
+    const nominaBtn    = document.getElementById('nomina-btn');
+    const balanceInput = document.getElementById('balance-input');
+    const spinnerNomina= document.getElementById('spinner-nomina');
+    const nominaMsg    = document.getElementById('nomina-message');
+
+    nominaBtn.addEventListener('click', async () => {
+        if (!balanceInput.files[0]) {
+            nominaMsg.innerHTML = '<span style="color:#e53e3e">Selecciona el archivo Balance primero.</span>';
+            return;
+        }
+        nominaBtn.disabled = true;
+        spinnerNomina.style.display = 'inline-block';
+        nominaMsg.innerHTML = '';
+
+        const fd = new FormData();
+        fd.append('balance', balanceInput.files[0]);
+        fd.append('consec_nomina', document.getElementById('consec_nomina').value);
+
+        try {
+            const res = await fetch('/api/nomina', { method: 'POST', body: fd });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url; a.download = 'PLANO_NOMINA.xlsx'; a.click();
+                URL.revokeObjectURL(url);
+                nominaMsg.innerHTML = '<span style="color:#38a169">✅ Nómina generada correctamente.</span>';
+            } else {
+                const data = await res.json();
+                nominaMsg.innerHTML = `<span style="color:#e53e3e">Error: ${data.error}</span>`;
+            }
+        } catch(e) {
+            nominaMsg.innerHTML = `<span style="color:#e53e3e">Error de conexión: ${e.message}</span>`;
+        } finally {
+            nominaBtn.disabled = false;
+            spinnerNomina.style.display = 'none';
+        }
+    });
+
     function showMessage(text, type) {
         const icon = type === 'error' 
             ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 9L9 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`

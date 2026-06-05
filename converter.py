@@ -831,6 +831,126 @@ def _leer_todo(wb_src):
             fecha_ini, fecha_fin)
 
 
+# ========================================
+# NÓMINA — PLANO SIIGO
+# ========================================
+# Estructura del plano de nómina Siigo:
+#  Tipo comprobante: 13 (Nómina)
+#  Por cada empleado, un consecutivo con estas entradas:
+#    DÉBITOS  (gastos de nómina)          CRÉDITOS (contrapartes)
+#    52050601 Sueldos                      25xxxx  Prestaciones / CxP empleado
+#    52051801 Comisiones                   23700501 CxP EPS (aporte empresa)
+#    52052701 Auxilio transporte           23700601 CxP ARL
+#    52053001 Cesantías                    23701001 CxP Caja/SENA/ICBF
+#    52053301 Int. cesantías               23803001 CxP Pensión (aporte empresa)
+#    52053601 Prima
+#    52053901 Vacaciones
+#    52056801 ARL
+#    52056901 EPS
+#    52057001 Pensión
+#    52057201 Caja compensación
+#    52057501 ICBF
+#    52057801 SENA
+
+# Mapa empleado NIT → cuentas desde balance
+NOMINA_EMPLEADOS_BALANCE = None  # se carga desde el archivo de balance
+
+def _cargar_nomina_balance(balance_path):
+    """Lee el balance y extrae cuentas de nómina por empleado."""
+    import openpyxl as _opx
+    from collections import defaultdict as _dd
+    wb = _opx.load_workbook(balance_path, data_only=True, read_only=True)
+    ws = wb['Sheet1']
+    CTAS_NOM = {
+        '52050601','52051801','52052701','52053001','52053301',
+        '52053601','52053901','52056801','52056901','52057001',
+        '52057201','52057501','52057801',
+    }
+    emp = _dd(lambda: {'nombre': '', 'cuentas': {}})
+    for row in ws.iter_rows(min_row=9, values_only=True):
+        if row[0] != 'Auxiliar' or not row[4]: continue
+        cuenta = str(row[2] or '').strip()
+        nit    = str(row[4] or '').strip()
+        nombre = str(row[6] or '').strip()
+        deb    = float(row[8] or 0)
+        if cuenta in CTAS_NOM and deb > 0:
+            emp[nit]['nombre'] = nombre
+            emp[nit]['cuentas'][cuenta] = deb
+    return dict(emp)
+
+
+def convert_nomina(empleados_data, wb_dst, consec_inicio, fecha_nomina=None):
+    """
+    Genera la hoja NOMINA con el plano Siigo.
+    empleados_data: dict {nit: {nombre, cuentas: {cuenta: monto}}}
+    Un consecutivo por empleado. Débitos gastos, crédito 25101001 (CxP empleado).
+    Para prestaciones sociales (cesantías, prima, vacaciones) → cuenta 25101xxx.
+    Para aportes parafiscales (EPS/ARL/Pensión/Caja) → cuentas 237xx / 238xx.
+    """
+    import datetime
+
+    ws_dst = wb_dst.create_sheet('NOMINA')
+    _write_headers(ws_dst)
+    row_out = 2
+
+    # Cuentas que van a contrapartes especiales (no CxP empleado)
+    CONTRAP = {
+        '52056901': '23700501',  # EPS → CxP EPS
+        '52056801': '23700601',  # ARL → CxP ARL
+        '52057201': '23701001',  # Caja compensación → CxP Caja/SENA/ICBF
+        '52057501': '23701001',  # ICBF → CxP Caja/SENA/ICBF
+        '52057801': '23701001',  # SENA → CxP Caja/SENA/ICBF
+        '52057001': '23803001',  # Pensión → CxP Fondos de pensión
+        '52053001': '25101001',  # Cesantías → CxP Cesantías
+        '52053301': '25101002',  # Int. cesantías → CxP Int. cesantías
+        '52053901': '25101003',  # Vacaciones → CxP Vacaciones
+        '52053601': '25101004',  # Prima → CxP Prima de servicios
+    }
+    # Cuentas de salario/transporte/comisiones → CxP empleado directo
+    CXP_EMPLEADO = '25050101'
+
+    if fecha_nomina is None:
+        fecha_nomina = datetime.date.today()
+
+    consec = consec_inicio
+
+    for nit, emp in sorted(empleados_data.items()):
+        cuentas = emp.get('cuentas', {})
+        if not cuentas:
+            continue
+
+        # Pre-calcular total débito y grupos de crédito
+        creditos = {}  # cta_credito → monto
+        total_debito = 0.0
+        for cta, monto in cuentas.items():
+            monto_r = round(monto, 2)
+            total_debito += monto_r
+            cta_cred = CONTRAP.get(cta, CXP_EMPLEADO)
+            creditos[cta_cred] = round(creditos.get(cta_cred, 0.0) + monto_r, 2)
+
+        desc = f"NOM: {emp.get('nombre', nit)[:30]}"
+
+        # Filas de débito (una por cuenta de gasto)
+        for cta, monto in sorted(cuentas.items()):
+            row = make_row(13, consec, fecha_nomina, cta, nit, None,
+                           desc, round(monto, 2), 0)
+            for col, val in enumerate(row, 1):
+                ws_dst.cell(row=row_out, column=col, value=val)
+            row_out += 1
+
+        # Filas de crédito (una por cuenta contraparte)
+        for cta_cred, monto_cred in sorted(creditos.items()):
+            row = make_row(13, consec, fecha_nomina, cta_cred, nit, None,
+                           desc, 0, monto_cred)
+            for col, val in enumerate(row, 1):
+                ws_dst.cell(row=row_out, column=col, value=val)
+            row_out += 1
+
+        consec += 1
+
+    return consec
+
+
 def process_file(input_stream, consec_compras=371, consec_nc=271, consec_gastos=798, consec_ventas=1, consec_nc_ventas=1):
     """Lee el archivo DIAN y genera los planos Siigo (compras, NC, gastos y ventas)."""
     wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
