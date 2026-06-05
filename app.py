@@ -2,7 +2,6 @@ from flask import Flask, request, send_file, render_template
 import io
 import traceback
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina
-from openpyxl import Workbook
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -105,6 +104,7 @@ def nomina():
             balance_file.save(tmp)
             tmp_path = tmp.name
 
+        from openpyxl import Workbook
         empleados = _cargar_nomina_balance(tmp_path)
         os.unlink(tmp_path)
 
