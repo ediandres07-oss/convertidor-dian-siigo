@@ -1308,8 +1308,8 @@ def generate_balance_prueba(input_stream):
         rows_data.append({
             'nivel': nivel, 'trans': trans, 'codigo': codigo,
             'nombre': nombre, 'ident': ident, 'tercero': tercero,
-            's_ini': float(s_ini or 0), 's_deb': float(s_deb or 0),
-            's_cred': float(s_cred or 0), 's_fin': float(s_fin or 0),
+            's_ini': _n(s_ini), 's_deb': _n(s_deb),
+            's_cred': _n(s_cred), 's_fin': _n(s_fin),
         })
 
     # ── Crear libro destino ───────────────────────────────────────────
