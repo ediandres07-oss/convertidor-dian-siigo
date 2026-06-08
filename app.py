@@ -1,7 +1,7 @@
 from flask import Flask, request, send_file, render_template
 import io
 import traceback
-from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina
+from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -127,6 +127,29 @@ def nomina():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error generando nómina: {str(e)}'}, 500
+
+
+@app.route('/api/balance', methods=['POST'])
+def balance():
+    if 'file' not in request.files:
+        return {'error': 'No se proporcionó ningún archivo'}, 400
+    file = request.files['file']
+    if file.filename == '':
+        return {'error': 'Archivo no seleccionado'}, 400
+    try:
+        input_stream = io.BytesIO(file.read())
+        output_stream = generate_balance_prueba(input_stream)
+        original_name = file.filename.rsplit('.', 1)[0]
+        download_name = f"BALANCE_TERCERO_{original_name}.xlsx"
+        return send_file(
+            output_stream,
+            as_attachment=True,
+            download_name=download_name,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error generando balance: {str(e)}'}, 500
 
 
 if __name__ == '__main__':

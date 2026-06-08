@@ -1267,3 +1267,179 @@ def process_liquidacion_iva(input_stream):
         fecha_ini, fecha_fin,
         mi_nit=mi_nit,
     )
+
+
+# ============================================================
+# BALANCE DE PRUEBA POR TERCERO — GENERADOR DE REPORTE
+# ============================================================
+
+def generate_balance_prueba(input_stream):
+    """
+    Lee un archivo 'Balance de prueba por tercero' exportado de Siigo
+    y genera un Excel formateado con la misma estructura jerárquica:
+    Clase → Grupo → Cuenta → Subcuenta → Auxiliar (con tercero y NIT).
+    """
+    wb_src = openpyxl.load_workbook(input_stream, data_only=True)
+    ws_src = wb_src.active
+
+    # ── Leer encabezado (filas 2-5) ──────────────────────────────────
+    empresa = ws_src.cell(2, 1).value or ''
+    nit_emp = ws_src.cell(3, 1).value or ''
+    periodo = ws_src.cell(4, 1).value or ''
+
+    # ── Leer todas las filas de datos (desde fila 9) ─────────────────
+    rows_data = []
+    for r in range(9, ws_src.max_row + 1):
+        nivel  = ws_src.cell(r, 1).value
+        if nivel is None:
+            continue
+        nivel = str(nivel).strip()
+        if nivel.startswith('Total') or nivel.startswith('Procesado'):
+            continue
+        trans   = ws_src.cell(r, 2).value
+        codigo  = str(ws_src.cell(r, 3).value or '').strip()
+        nombre  = str(ws_src.cell(r, 4).value or '').strip()
+        ident   = str(ws_src.cell(r, 5).value or '').strip()
+        tercero = str(ws_src.cell(r, 7).value or '').strip()
+        s_ini   = ws_src.cell(r, 8).value
+        s_deb   = ws_src.cell(r, 9).value
+        s_cred  = ws_src.cell(r, 10).value
+        s_fin   = ws_src.cell(r, 11).value
+        rows_data.append({
+            'nivel': nivel, 'trans': trans, 'codigo': codigo,
+            'nombre': nombre, 'ident': ident, 'tercero': tercero,
+            's_ini': float(s_ini or 0), 's_deb': float(s_deb or 0),
+            's_cred': float(s_cred or 0), 's_fin': float(s_fin or 0),
+        })
+
+    # ── Crear libro destino ───────────────────────────────────────────
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Balance Prueba'
+
+    # Colores por nivel
+    COLOR = {
+        'Clase':     ('1a3a5c', 'FFFFFF'),   # azul oscuro / blanco
+        'Grupo':     ('1e6091', 'FFFFFF'),   # azul medio / blanco
+        'Cuenta':    ('2980b9', 'FFFFFF'),   # azul claro / blanco
+        'Subcuenta': ('aed6f1', '1a3a5c'),   # celeste / azul oscuro
+        'Auxiliar':  ('FFFFFF', '1a3a5c'),   # blanco / azul oscuro
+    }
+
+    ALTO = {
+        'Clase': 20, 'Grupo': 18, 'Cuenta': 16,
+        'Subcuenta': 15, 'Auxiliar': 14,
+    }
+
+    def _border():
+        side = Side(style='thin', color='BFCCD8')
+        return Border(left=side, right=side, top=side, bottom=side)
+
+    def _cell(row, col, value, bold=False, bg=None, fg='000000',
+              align='left', fmt=None, size=10, wrap=False):
+        c = ws.cell(row=row, column=col, value=value)
+        c.font = Font(bold=bold, size=size, color=fg,
+                      name='Calibri')
+        if bg:
+            c.fill = PatternFill(fill_type='solid', fgColor=bg)
+        c.alignment = Alignment(horizontal=align, vertical='center',
+                                wrap_text=wrap)
+        c.border = _border()
+        if fmt:
+            c.number_format = fmt
+        return c
+
+    FMT_NUM = '#,##0.00'
+
+    # ── Fila 1: título ────────────────────────────────────────────────
+    ws.merge_cells('A1:J1')
+    t = ws['A1']
+    t.value = 'BALANCE DE PRUEBA POR TERCERO'
+    t.font = Font(bold=True, size=14, color='1a3a5c', name='Calibri')
+    t.alignment = Alignment(horizontal='center', vertical='center')
+    t.fill = PatternFill(fill_type='solid', fgColor='d6eaf8')
+    ws.row_dimensions[1].height = 26
+
+    # ── Filas 2-3: empresa / periodo ─────────────────────────────────
+    ws.merge_cells('A2:J2')
+    e = ws['A2']
+    e.value = f'{empresa}  —  NIT: {nit_emp}'
+    e.font = Font(bold=True, size=11, color='1a3a5c', name='Calibri')
+    e.alignment = Alignment(horizontal='center', vertical='center')
+    e.fill = PatternFill(fill_type='solid', fgColor='eaf4fb')
+    ws.row_dimensions[2].height = 18
+
+    ws.merge_cells('A3:J3')
+    p = ws['A3']
+    p.value = str(periodo).strip()
+    p.font = Font(italic=True, size=10, color='555555', name='Calibri')
+    p.alignment = Alignment(horizontal='center', vertical='center')
+    p.fill = PatternFill(fill_type='solid', fgColor='f2f9fd')
+    ws.row_dimensions[3].height = 16
+
+    # ── Fila 4: encabezados de columna ───────────────────────────────
+    HEADERS = [
+        'Nivel', 'Código', 'Nombre cuenta',
+        'NIT / Identificación', 'Nombre tercero',
+        'Saldo inicial', 'Mov. débito', 'Mov. crédito', 'Saldo final', 'T'
+    ]
+    for col, h in enumerate(HEADERS, 1):
+        _cell(4, col, h, bold=True, bg='1a3a5c', fg='FFFFFF',
+              align='center', size=9)
+    ws.row_dimensions[4].height = 18
+
+    # ── Anchos de columna ────────────────────────────────────────────
+    COL_W = [12, 12, 40, 16, 38, 16, 16, 16, 16, 5]
+    for i, w in enumerate(COL_W, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # ── Datos ─────────────────────────────────────────────────────────
+    r = 5
+    for d in rows_data:
+        nivel = d['nivel']
+        bg, fg = COLOR.get(nivel, ('FFFFFF', '000000'))
+        is_aux = (nivel == 'Auxiliar')
+        bold = not is_aux
+
+        _cell(r, 1,  nivel,      bold=bold, bg=bg, fg=fg, align='center', size=9)
+        _cell(r, 2,  d['codigo'], bold=bold, bg=bg, fg=fg, size=9)
+        _cell(r, 3,  d['nombre'], bold=bold, bg=bg, fg=fg, size=9)
+        _cell(r, 4,  d['ident'] if is_aux else '', bold=False, bg=bg, fg=fg, size=9)
+        _cell(r, 5,  d['tercero'] if is_aux else '', bold=False, bg=bg, fg=fg, size=9)
+        _cell(r, 6,  d['s_ini'],  bold=bold, bg=bg, fg=fg, align='right', fmt=FMT_NUM, size=9)
+        _cell(r, 7,  d['s_deb'],  bold=bold, bg=bg, fg=fg, align='right', fmt=FMT_NUM, size=9)
+        _cell(r, 8,  d['s_cred'], bold=bold, bg=bg, fg=fg, align='right', fmt=FMT_NUM, size=9)
+        _cell(r, 9,  d['s_fin'],  bold=bold, bg=bg, fg=fg, align='right', fmt=FMT_NUM, size=9)
+        _cell(r, 10, 'Sí' if d['trans'] == 'Sí' else 'No',
+              bold=False, bg=bg, fg=fg, align='center', size=8)
+        ws.row_dimensions[r].height = ALTO.get(nivel, 14)
+        r += 1
+
+    # ── Fila total general ────────────────────────────────────────────
+    total_deb  = sum(d['s_deb']  for d in rows_data if d['nivel'] == 'Clase')
+    total_cred = sum(d['s_cred'] for d in rows_data if d['nivel'] == 'Clase')
+    total_ini  = sum(d['s_ini']  for d in rows_data if d['nivel'] == 'Clase')
+    ws.merge_cells(f'A{r}:E{r}')
+    t = ws[f'A{r}']
+    t.value = 'TOTAL GENERAL'
+    t.font = Font(bold=True, size=10, color='FFFFFF', name='Calibri')
+    t.fill = PatternFill(fill_type='solid', fgColor='1a3a5c')
+    t.alignment = Alignment(horizontal='right', vertical='center')
+    t.border = _border()
+    for c2 in ['B', 'C', 'D', 'E']:
+        ws[f'{c2}{r}'].border = _border()
+        ws[f'{c2}{r}'].fill = PatternFill(fill_type='solid', fgColor='1a3a5c')
+    _cell(r, 6, total_ini,  bold=True, bg='1a3a5c', fg='FFFFFF', align='right', fmt=FMT_NUM)
+    _cell(r, 7, total_deb,  bold=True, bg='1a3a5c', fg='FFFFFF', align='right', fmt=FMT_NUM)
+    _cell(r, 8, total_cred, bold=True, bg='1a3a5c', fg='FFFFFF', align='right', fmt=FMT_NUM)
+    _cell(r, 9, None,       bold=True, bg='1a3a5c', fg='FFFFFF')
+    _cell(r, 10, '',        bold=True, bg='1a3a5c', fg='FFFFFF')
+    ws.row_dimensions[r].height = 20
+
+    # Congelar paneles debajo del encabezado
+    ws.freeze_panes = 'A5'
+
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return out
