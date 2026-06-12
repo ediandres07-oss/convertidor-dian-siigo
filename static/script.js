@@ -71,7 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         msgBox.innerHTML   = '';
     }
 
-    browseBtn && browseBtn.addEventListener('click', () => fileInput.click());
+    browseBtn && browseBtn.addEventListener('click', e => {
+        e.stopPropagation();   // evitar que el clic burbujee al drop-zone y abra el diálogo dos veces
+        fileInput.click();
+    });
     fileInput  && fileInput.addEventListener('change', () => {
         if (fileInput.files.length) setFile(fileInput.files[0]);
     });
