@@ -177,6 +177,21 @@ def _n(val):
         return 0.0
 
 
+def _fecha(val):
+    """Convierte fechas en texto (DD-MM-YYYY o YYYY-MM-DD) a datetime.
+    Si ya es datetime o no se puede parsear, lo devuelve tal cual."""
+    if val is None or not isinstance(val, str):
+        return val
+    from datetime import datetime as _dt
+    s = val.strip().split(' ')[0]   # quitar hora si viene
+    for fmt_str in ('%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d'):
+        try:
+            return _dt.strptime(s, fmt_str)
+        except ValueError:
+            continue
+    return val
+
+
 # ========================================
 HEADERS = [
     'Tipo de comprobante', 'Consecutivo comprobante', 'Fecha de elaboración ',
@@ -774,7 +789,7 @@ def _leer_todo(wb_src):
         if fmt == 'reporte':
             tipo         = str(row[0] or '').lower()
             folio        = row[2]
-            fecha        = row[4]
+            fecha        = _fecha(row[4])
             nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
             no_gravado   = _n(row[9])
@@ -783,10 +798,11 @@ def _leer_todo(wb_src):
             total        = _n(row[12])
             nit_cliente  = nit_receptor
             nombre       = ''
+            grupo        = str(row[14] or '').strip() if len(row) > 14 else ''
         else:
             tipo         = str(row[0] or '').lower()
             folio        = row[2]
-            fecha        = row[7]
+            fecha        = _fecha(row[7])
             nit_emisor   = str(row[9]  or '').strip()
             nit_receptor = str(row[11] or '').strip()
             nombre       = str(row[12] or '').strip()
@@ -795,6 +811,7 @@ def _leer_todo(wb_src):
             no_gravado   = 0.0
             gravado_raw  = 0.0
             nit_cliente  = nit_receptor
+            grupo        = str(row[31] or '').strip() if len(row) > 31 else ''
 
         iva_r   = round(iva,   2)
         total_r = round(total, 2)
@@ -803,8 +820,19 @@ def _leer_todo(wb_src):
         es_nc      = 'nota de cr' in tipo
         es_factura = 'factura'    in tipo
 
+        # Clasificación Emitido/Recibido: la columna "Grupo" de la DIAN es
+        # la fuente oficial. Si no existe, se infiere por NIT. Esto evita
+        # que autofacturas (emisor == receptor == mi_nit) se dupliquen
+        # como gasto Y venta a la vez.
+        if grupo in ('Emitido', 'Recibido'):
+            es_recibido = (grupo == 'Recibido')
+            es_emitido  = (grupo == 'Emitido')
+        else:
+            es_recibido = (nit_receptor == mi_nit and nit_emisor != mi_nit)
+            es_emitido  = (nit_emisor == mi_nit)
+
         # ── Compras / gastos (recibidos por mi_nit) ──
-        if nit_receptor == mi_nit and folio is not None:
+        if es_recibido and nit_receptor == mi_nit and folio is not None:
             # Usar base_r (total-iva) siempre para garantizar balance exacto.
             # gravado_raw puede venir de fórmulas Excel que leen como 0.
             grav = base_r; nograv = 0.0
@@ -820,7 +848,7 @@ def _leer_todo(wb_src):
                 facturas_gastos.append(doc)
 
         # ── Ventas (emitidas por mi_nit) ──
-        if nit_emisor == mi_nit and folio is not None:
+        if es_emitido and nit_emisor == mi_nit and folio is not None:
             vdoc = {'folio': folio, 'fecha': fecha, 'nit': nit_cliente,
                     'nombre': nombre, 'gravado': base_r, 'iva': iva_r, 'total': total_r}
             if es_nc:
