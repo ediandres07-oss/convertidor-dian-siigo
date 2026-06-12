@@ -1312,44 +1312,166 @@ def process_liquidacion_iva(input_stream):
 # BALANCE DE PRUEBA POR TERCERO — GENERADOR DE REPORTE
 # ============================================================
 
+# Nombres PUC para construir el balance desde planos
+PUC_NOMBRES = {
+    '1': 'Activo', '2': 'Pasivo', '3': 'Patrimonio', '4': 'Ingresos',
+    '5': 'Gastos', '6': 'Costos de ventas',
+    '13': 'Deudores', '14': 'Inventarios', '22': 'Proveedores',
+    '23': 'Cuentas por pagar', '24': 'Impuestos, gravámenes y tasas',
+    '25': 'Obligaciones laborales', '41': 'Operacionales',
+    '51': 'Operacionales de administración', '52': 'Operacionales de ventas',
+    '1305': 'Clientes', '1435': 'Mercancías no fabricadas por la empresa',
+    '2205': 'Proveedores nacionales', '2335': 'Costos y gastos por pagar',
+    '2408': 'Impuesto sobre las ventas por pagar', '4100': 'Comercio al por mayor y al por menor',
+    '130505': 'Clientes nacionales', '143501': 'Mercancías no fabricadas',
+    '220505': 'Proveedores nacionales', '233595': 'Otros costos y gastos por pagar',
+    '240805': 'IVA generado', '240810': 'IVA descontable', '240815': 'IVA descontable servicios',
+    '410095': 'Comercio al por mayor y al por menor',
+    '13050501': 'Clientes nacionales',
+    '14350101': 'Mercancías no fabricadas por la empresa',
+    '22050501': 'Proveedores nacionales',
+    '23359501': 'Otros costos y gastos por pagar',
+    '24080501': 'IVA generado',
+    '24081001': 'IVA descontable bienes',
+    '24081002': 'IVA descontable devoluciones',
+    '24081501': 'IVA descontable servicios',
+    '41009501': 'Comercio al por mayor y al por menor',
+}
+
+
+def _balance_desde_planos(wb_src):
+    """
+    Construye las filas del balance de prueba por tercero a partir de un
+    libro de PLANOS Siigo (hojas con columnas: cuenta=6, nit=7, deb=22, cred=23).
+    Retorna (rows_data, periodo).
+    """
+    from collections import defaultdict
+
+    aux = defaultdict(lambda: [0.0, 0.0])   # (cuenta, nit) -> [deb, cred]
+    fechas = []
+
+    for sheet in wb_src.sheetnames:
+        ws = wb_src[sheet]
+        if str(ws.cell(1, 1).value or '').strip() != 'Tipo de comprobante':
+            continue
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if len(row) < 23:
+                continue
+            cuenta = str(row[5] or '').strip()
+            nit    = str(row[6] or '').strip()
+            deb    = _n(row[21])
+            cred   = _n(row[22])
+            if not cuenta or not cuenta.isdigit():
+                continue
+            aux[(cuenta, nit)][0] += deb
+            aux[(cuenta, nit)][1] += cred
+            if row[2]:
+                fechas.append(row[2])
+
+    if not aux:
+        raise ValueError(
+            'El archivo no contiene un Balance de Siigo ni hojas de planos. '
+            'Sube el Balance de prueba por tercero exportado de Siigo o un archivo de planos.')
+
+    # Jerarquía: Clase(1) > Grupo(2) > Cuenta(4) > Subcuenta(6) > Auxiliar(8)+NIT
+    niveles = {}   # prefijo -> [deb, cred]
+    for (cuenta, _nit), (d, c) in aux.items():
+        for ln in (1, 2, 4, 6, 8):
+            pref = cuenta[:ln]
+            niveles.setdefault(pref, [0.0, 0.0])
+            niveles[pref][0] += d
+            niveles[pref][1] += c
+
+    rows_data = []
+    def _row(nivel, codigo, nombre, ident, tercero, d, c):
+        rows_data.append({
+            'nivel': nivel, 'trans': 'Sí' if nivel == 'Auxiliar' else 'No',
+            'codigo': codigo, 'nombre': nombre, 'ident': ident,
+            'tercero': tercero, 's_ini': 0.0, 's_deb': round(d, 2),
+            's_cred': round(c, 2), 's_fin': round(d - c, 2),
+        })
+
+    NIVEL_NOMBRE = {1: 'Clase', 2: 'Grupo', 4: 'Cuenta', 6: 'Subcuenta'}
+    cuentas8 = sorted({cta for (cta, _n2) in aux})
+    emitidos = set()
+    for cta in cuentas8:
+        for ln in (1, 2, 4, 6):
+            pref = cta[:ln]
+            if pref not in emitidos:
+                emitidos.add(pref)
+                d, c = niveles[pref]
+                _row(NIVEL_NOMBRE[ln], pref, PUC_NOMBRES.get(pref, ''), '', '', d, c)
+        # Auxiliares de esta cuenta (un renglón por tercero)
+        terceros = sorted([(nit, v) for (c2, nit), v in aux.items() if c2 == cta])
+        nombre8 = PUC_NOMBRES.get(cta, '')
+        for nit, (d, c) in terceros:
+            _row('Auxiliar', cta, nombre8, nit, '', d, c)
+
+    fechas_dt = [f for f in fechas if hasattr(f, 'strftime')]
+    if fechas_dt:
+        periodo = f"De {min(fechas_dt).strftime('%d-%m-%Y')} a {max(fechas_dt).strftime('%d-%m-%Y')}"
+    else:
+        periodo = ''
+    return rows_data, periodo
+
+
 def generate_balance_prueba(input_stream):
     """
-    Lee un archivo 'Balance de prueba por tercero' exportado de Siigo
-    y genera un Excel formateado con la misma estructura jerárquica:
-    Clase → Grupo → Cuenta → Subcuenta → Auxiliar (con tercero y NIT).
+    Genera un Balance de prueba por tercero formateado.
+    Acepta dos tipos de archivo:
+      1. Balance de prueba por tercero exportado de Siigo (lo reformatea).
+      2. Archivo de PLANOS Siigo o reporte DIAN (construye el balance
+         agregando los movimientos débito/crédito por cuenta y tercero).
     """
-    wb_src = openpyxl.load_workbook(input_stream, data_only=True)
+    data = input_stream.read()
+    wb_src = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
     ws_src = wb_src.active
 
-    # ── Leer encabezado (filas 2-5) ──────────────────────────────────
-    empresa = ws_src.cell(2, 1).value or ''
-    nit_emp = ws_src.cell(3, 1).value or ''
-    periodo = ws_src.cell(4, 1).value or ''
+    encabezado = ' '.join(str(ws_src.cell(r, 1).value or '') for r in (1, 2, 3)).lower()
+    es_balance_siigo = 'balance de prueba' in encabezado
 
-    # ── Leer todas las filas de datos (desde fila 9) ─────────────────
-    rows_data = []
-    for r in range(9, ws_src.max_row + 1):
-        nivel  = ws_src.cell(r, 1).value
-        if nivel is None:
-            continue
-        nivel = str(nivel).strip()
-        if nivel.startswith('Total') or nivel.startswith('Procesado'):
-            continue
-        trans   = ws_src.cell(r, 2).value
-        codigo  = str(ws_src.cell(r, 3).value or '').strip()
-        nombre  = str(ws_src.cell(r, 4).value or '').strip()
-        ident   = str(ws_src.cell(r, 5).value or '').strip()
-        tercero = str(ws_src.cell(r, 7).value or '').strip()
-        s_ini   = ws_src.cell(r, 8).value
-        s_deb   = ws_src.cell(r, 9).value
-        s_cred  = ws_src.cell(r, 10).value
-        s_fin   = ws_src.cell(r, 11).value
-        rows_data.append({
-            'nivel': nivel, 'trans': trans, 'codigo': codigo,
-            'nombre': nombre, 'ident': ident, 'tercero': tercero,
-            's_ini': _n(s_ini), 's_deb': _n(s_deb),
-            's_cred': _n(s_cred), 's_fin': _n(s_fin),
-        })
+    if es_balance_siigo:
+        # ── Reformatear balance exportado de Siigo ───────────────────
+        empresa = ws_src.cell(3, 1).value or ''
+        nit_emp = ws_src.cell(4, 1).value or ''
+        periodo = ws_src.cell(5, 1).value or ''
+
+        rows_data = []
+        for r in range(9, ws_src.max_row + 1):
+            nivel  = ws_src.cell(r, 1).value
+            if nivel is None:
+                continue
+            nivel = str(nivel).strip()
+            if nivel.startswith('Total') or nivel.startswith('Procesado'):
+                continue
+            trans   = ws_src.cell(r, 2).value
+            codigo  = str(ws_src.cell(r, 3).value or '').strip()
+            nombre  = str(ws_src.cell(r, 4).value or '').strip()
+            ident   = str(ws_src.cell(r, 5).value or '').strip()
+            tercero = str(ws_src.cell(r, 7).value or '').strip()
+            s_ini   = ws_src.cell(r, 8).value
+            s_deb   = ws_src.cell(r, 9).value
+            s_cred  = ws_src.cell(r, 10).value
+            s_fin   = ws_src.cell(r, 11).value
+            rows_data.append({
+                'nivel': nivel, 'trans': trans, 'codigo': codigo,
+                'nombre': nombre, 'ident': ident, 'tercero': tercero,
+                's_ini': _n(s_ini), 's_deb': _n(s_deb),
+                's_cred': _n(s_cred), 's_fin': _n(s_fin),
+            })
+    else:
+        # ── Construir balance desde planos o reporte DIAN ────────────
+        primera_celda = str(ws_src.cell(1, 1).value or '').strip()
+        if primera_celda == 'Tipo de comprobante':
+            wb_planos = wb_src               # ya es un archivo de planos
+        else:
+            # Es un reporte DIAN: generar los planos internamente
+            planos_stream = process_file(io.BytesIO(data))
+            wb_planos = openpyxl.load_workbook(planos_stream, data_only=True)
+
+        rows_data, periodo = _balance_desde_planos(wb_planos)
+        empresa = 'Balance generado desde movimientos'
+        nit_emp = ''
 
     # ── Crear libro destino ───────────────────────────────────────────
     wb = Workbook()
@@ -1402,7 +1524,7 @@ def generate_balance_prueba(input_stream):
     # ── Filas 2-3: empresa / periodo ─────────────────────────────────
     ws.merge_cells('A2:J2')
     e = ws['A2']
-    e.value = f'{empresa}  —  NIT: {nit_emp}'
+    e.value = f'{empresa}  —  NIT: {nit_emp}' if nit_emp else str(empresa)
     e.font = Font(bold=True, size=11, color='1a3a5c', name='Calibri')
     e.alignment = Alignment(horizontal='center', vertical='center')
     e.fill = PatternFill(fill_type='solid', fgColor='eaf4fb')
