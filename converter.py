@@ -267,8 +267,11 @@ def _parse_rows(wb_src):
             gravado      = 0.0
             no_gravado   = 0.0
 
-        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
-            conteo_nit[nit_receptor] += 1
+        # Contar emisor Y receptor para detectar mi_nit correctamente
+        # (archivos con muchas ventas tienen más emisiones que recepciones)
+        for nit_check in (nit_emisor, nit_receptor):
+            if nit_check not in EXCLUIDOS and _es_nit_valido(nit_check):
+                conteo_nit[nit_check] += 1
 
         raw_rows.append((tipo, folio, fecha, nit_emisor, nit_receptor,
                          no_gravado, gravado, iva, total))
@@ -525,21 +528,25 @@ def read_ventas(wb_src):
     col_receptor = 7 if fmt == 'reporte' else 11  # 0-based
 
     # Primer paso: detectar mi_nit y recolectar filas crudas
+    # Contar emisor + receptor para evitar que NITs genéricos ganen
     conteo = Counter()
     raw = []
     for row in ws.iter_rows(min_row=2, values_only=True):
         if fmt == 'reporte':
             if len(row) < 13: continue
+            nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
         else:
             if len(row) < 30: continue
+            nit_emisor   = str(row[9]  or '').strip()
             nit_receptor = str(row[11] or '').strip()
-        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
-            conteo[nit_receptor] += 1
+        for nit_check in (nit_emisor, nit_receptor):
+            if nit_check not in EXCLUIDOS and _es_nit_valido(nit_check):
+                conteo[nit_check] += 1
         raw.append(row)
 
     if not conteo:
-        raise ValueError("No se encontró ningún NIT receptor.")
+        raise ValueError("No se encontró ningún NIT en el archivo.")
     mi_nit = conteo.most_common(1)[0][0]
 
     ventas    = []
@@ -734,21 +741,26 @@ def _leer_todo(wb_src):
         return v.isdigit() and 6 <= len(v) <= 15
 
     # Primera pasada: detectar mi_nit y acumular filas crudas en memoria
+    # Se cuentan EMISOR + RECEPTOR para que archivos con muchas ventas
+    # no confundan un NIT genérico (ej: 111111) con el NIT de la empresa.
     conteo = Counter()
     raw = []
     for row in ws.iter_rows(min_row=2, values_only=True):
         if fmt == 'reporte':
             if len(row) < 13: continue
+            nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
         else:
             if len(row) < 30: continue
+            nit_emisor   = str(row[9]  or '').strip()
             nit_receptor = str(row[11] or '').strip()
-        if nit_receptor not in EXCLUIDOS and _es_nit_valido(nit_receptor):
-            conteo[nit_receptor] += 1
+        for nit_check in (nit_emisor, nit_receptor):
+            if nit_check not in EXCLUIDOS and _es_nit_valido(nit_check):
+                conteo[nit_check] += 1
         raw.append(row)
 
     if not conteo:
-        raise ValueError("No se encontró ningún NIT receptor en el archivo.")
+        raise ValueError("No se encontró ningún NIT en el archivo.")
     mi_nit = conteo.most_common(1)[0][0]
 
     # Segunda pasada sobre lista Python (muy rápida, ya en memoria)
@@ -793,10 +805,9 @@ def _leer_todo(wb_src):
 
         # ── Compras / gastos (recibidos por mi_nit) ──
         if nit_receptor == mi_nit and folio is not None:
-            if fmt == 'reporte':
-                grav = gravado_raw; nograv = no_gravado
-            else:
-                grav = base_r; nograv = 0.0
+            # Usar base_r (total-iva) siempre para garantizar balance exacto.
+            # gravado_raw puede venir de fórmulas Excel que leen como 0.
+            grav = base_r; nograv = 0.0
 
             doc = {'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
                    'no_gravado': nograv, 'gravado': grav, 'iva': iva_r, 'total': total_r}
