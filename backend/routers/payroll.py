@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from io import BytesIO
-from ..utils import calcular_liquidacion, calcular_prima, calcular_vacaciones, generar_pdf
+from ..utils import calcular_liquidacion, calcular_prima, calcular_vacaciones, generar_pdf, generar_pdf_prima, generar_pdf_vacaciones
 
 router = APIRouter(prefix="/api", tags=["payroll"])
 
@@ -234,6 +234,74 @@ async def pdf_zip(file: UploadFile = File(...)):
             iter([zip_buffer.getvalue()]),
             media_type="application/zip",
             headers={"Content-Disposition": "attachment; filename=liquidaciones.zip"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/exportar-pdf-prima-zip")
+async def exportar_pdf_prima_zip(file: UploadFile = File(...)):
+    """
+    Exporta un ZIP con PDFs individuales de Prima de Servicios
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+        resultados = calcular_prima(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as z:
+            for emp in resultados:
+                pdf_content = generar_pdf_prima(emp)
+                nombre_archivo = f"Prima_{emp['nombre'].replace(' ', '_')}.pdf"
+                z.writestr(nombre_archivo, pdf_content)
+
+        zip_buffer.seek(0)
+
+        return StreamingResponse(
+            iter([zip_buffer.getvalue()]),
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=prima_servicios.zip"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/exportar-pdf-vacaciones-zip")
+async def exportar_pdf_vacaciones_zip(file: UploadFile = File(...)):
+    """
+    Exporta un ZIP con PDFs individuales de Vacaciones
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+        resultados = calcular_vacaciones(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as z:
+            for emp in resultados:
+                pdf_content = generar_pdf_vacaciones(emp)
+                nombre_archivo = f"Vacaciones_{emp['nombre'].replace(' ', '_')}.pdf"
+                z.writestr(nombre_archivo, pdf_content)
+
+        zip_buffer.seek(0)
+
+        return StreamingResponse(
+            iter([zip_buffer.getvalue()]),
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=vacaciones_proporcionales.zip"}
         )
 
     except Exception as e:

@@ -172,6 +172,221 @@ def calcular_liquidacion(df_empleados: pd.DataFrame, df_parametros: pd.DataFrame
     return resultados
 
 
+def generar_pdf_prima(empleado: Dict) -> bytes:
+    """
+    Genera un PDF con la prima de servicios del empleado
+    """
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from io import BytesIO
+    from datetime import datetime
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    story = []
+    styles = getSampleStyleSheet()
+
+    # Título
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=14,
+        textColor=colors.HexColor('#1f4788'),
+        spaceAfter=20,
+        alignment=1
+    )
+
+    story.append(Paragraph("LIQUIDACIÓN PRIMA DE SERVICIOS", title_style))
+    story.append(Spacer(1, 0.2*inch))
+
+    # Información del empleado
+    emp_data = [
+        ['DATOS DEL EMPLEADO', ''],
+        ['Nombre:', empleado.get('nombre', '')],
+        ['Documento:', empleado.get('documento', '')],
+        ['Salario Mensual:', f"${empleado.get('salario_mensual', 0):,.2f}"],
+        ['Auxilio Transporte:', f"${empleado.get('auxilio_transporte', 0):,.2f}"],
+        ['Días Laborados:', str(int(empleado.get('dias_laborados', 30)))],
+    ]
+
+    emp_table = Table(emp_data, colWidths=[2*inch, 4*inch])
+    emp_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1f4788')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
+    ]))
+
+    story.append(emp_table)
+    story.append(Spacer(1, 0.2*inch))
+
+    # Cálculo de Prima
+    prima_data = [
+        ['CONCEPTO', 'VALOR'],
+        ['Base Prima (Salario + Auxilio):', f"${empleado.get('base_prima', 0):,.2f}"],
+        ['Días Laborados:', str(int(empleado.get('dias_laborados', 30)))],
+        ['PRIMA DE SERVICIOS', f"${empleado.get('valor_prima', 0):,.2f}"],
+    ]
+
+    prima_table = Table(prima_data, colWidths=[3.5*inch, 2.5*inch])
+    prima_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#2d5016')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (1, 0), 10),
+        ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (1, -1), 12),
+        ('BACKGROUND', (0, -1), (1, -1), colors.HexColor('#90EE90')),
+        ('BOTTOMPADDING', (0, 0), (1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f0f0f0')]),
+    ]))
+
+    story.append(prima_table)
+    story.append(Spacer(1, 0.3*inch))
+
+    # Fórmula
+    formula_style = ParagraphStyle(
+        'FormulaStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=1
+    )
+    story.append(Paragraph("Prima = (Salario + Auxilio) × Días ÷ 360", formula_style))
+    story.append(Spacer(1, 0.2*inch))
+
+    # Pie de página
+    footer_style = ParagraphStyle(
+        'FooterStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=1
+    )
+    story.append(Paragraph(f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", footer_style))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generar_pdf_vacaciones(empleado: Dict) -> bytes:
+    """
+    Genera un PDF con las vacaciones proporcionales del empleado
+    """
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from io import BytesIO
+    from datetime import datetime
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    story = []
+    styles = getSampleStyleSheet()
+
+    # Título
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=14,
+        textColor=colors.HexColor('#1f4788'),
+        spaceAfter=20,
+        alignment=1
+    )
+
+    story.append(Paragraph("LIQUIDACIÓN VACACIONES", title_style))
+    story.append(Spacer(1, 0.2*inch))
+
+    # Información del empleado
+    emp_data = [
+        ['DATOS DEL EMPLEADO', ''],
+        ['Nombre:', empleado.get('nombre', '')],
+        ['Documento:', empleado.get('documento', '')],
+        ['Salario Mensual:', f"${empleado.get('salario_mensual', 0):,.2f}"],
+        ['Días Laborados:', str(int(empleado.get('dias_laborados', 30)))],
+    ]
+
+    emp_table = Table(emp_data, colWidths=[2*inch, 4*inch])
+    emp_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1f4788')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
+    ]))
+
+    story.append(emp_table)
+    story.append(Spacer(1, 0.2*inch))
+
+    # Cálculo de Vacaciones
+    vaca_data = [
+        ['CONCEPTO', 'VALOR'],
+        ['Salario Mensual:', f"${empleado.get('salario_mensual', 0):,.2f}"],
+        ['Días Laborados:', str(int(empleado.get('dias_laborados', 30)))],
+        ['VACACIONES PROPORCIONALES', f"${empleado.get('valor_vacaciones', 0):,.2f}"],
+    ]
+
+    vaca_table = Table(vaca_data, colWidths=[3.5*inch, 2.5*inch])
+    vaca_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#0066cc')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (1, 0), 10),
+        ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (1, -1), 12),
+        ('BACKGROUND', (0, -1), (1, -1), colors.HexColor('#87CEEB')),
+        ('BOTTOMPADDING', (0, 0), (1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f0f0f0')]),
+    ]))
+
+    story.append(vaca_table)
+    story.append(Spacer(1, 0.3*inch))
+
+    # Fórmula
+    formula_style = ParagraphStyle(
+        'FormulaStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=1
+    )
+    story.append(Paragraph("Vacaciones = Salario × Días ÷ 720", formula_style))
+    story.append(Spacer(1, 0.2*inch))
+
+    # Pie de página
+    footer_style = ParagraphStyle(
+        'FooterStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=1
+    )
+    story.append(Paragraph(f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", footer_style))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def generar_pdf(empleado: Dict, numero_documento: str = "") -> bytes:
     """
     Genera un PDF con la liquidación del empleado

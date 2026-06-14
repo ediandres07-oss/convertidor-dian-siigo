@@ -193,23 +193,44 @@ with tab3:
                 'valor_prima': 'Prima'
             }), use_container_width=True, hide_index=True)
 
-            # Botón descargar
-            if st.button("📥 Descargar Excel Prima", use_container_width=True):
-                with st.spinner("Generando Excel..."):
-                    try:
-                        files = {'file': st.session_state.uploaded_file.getvalue()}
-                        response = requests.post(f"{API}/api/exportar-excel-prima", files=files, timeout=30)
+            # Botones descargar
+            col1, col2 = st.columns(2)
 
-                        if response.status_code == 200:
-                            st.download_button(
-                                label="⬇️ Descargar",
-                                data=response.content,
-                                file_name="prima_servicios.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True
-                            )
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
+            with col1:
+                if st.button("📥 Descargar Excel Prima", use_container_width=True):
+                    with st.spinner("Generando Excel..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            response = requests.post(f"{API}/api/exportar-excel-prima", files=files, timeout=30)
+
+                            if response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Descargar Excel",
+                                    data=response.content,
+                                    file_name="prima_servicios.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    use_container_width=True
+                                )
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+
+            with col2:
+                if st.button("📄 Descargar ZIP PDFs Prima", use_container_width=True):
+                    with st.spinner("Generando ZIP..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            response = requests.post(f"{API}/api/exportar-pdf-prima-zip", files=files, timeout=30)
+
+                            if response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Descargar ZIP",
+                                    data=response.content,
+                                    file_name="prima_servicios.zip",
+                                    mime="application/zip",
+                                    use_container_width=True
+                                )
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
 
     else:
         st.info("📤 Carga un archivo para calcular prima")
@@ -259,23 +280,44 @@ with tab4:
                 'valor_vacaciones': 'Vacaciones'
             }), use_container_width=True, hide_index=True)
 
-            # Botón descargar
-            if st.button("📥 Descargar Excel Vacaciones", use_container_width=True):
-                with st.spinner("Generando Excel..."):
-                    try:
-                        files = {'file': st.session_state.uploaded_file.getvalue()}
-                        response = requests.post(f"{API}/api/exportar-excel-vacaciones", files=files, timeout=30)
+            # Botones descargar
+            col1, col2 = st.columns(2)
 
-                        if response.status_code == 200:
-                            st.download_button(
-                                label="⬇️ Descargar",
-                                data=response.content,
-                                file_name="vacaciones_proporcionales.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True
-                            )
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
+            with col1:
+                if st.button("📥 Descargar Excel Vacaciones", use_container_width=True):
+                    with st.spinner("Generando Excel..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            response = requests.post(f"{API}/api/exportar-excel-vacaciones", files=files, timeout=30)
+
+                            if response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Descargar Excel",
+                                    data=response.content,
+                                    file_name="vacaciones_proporcionales.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    use_container_width=True
+                                )
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+
+            with col2:
+                if st.button("📄 Descargar ZIP PDFs Vacaciones", use_container_width=True):
+                    with st.spinner("Generando ZIP..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            response = requests.post(f"{API}/api/exportar-pdf-vacaciones-zip", files=files, timeout=30)
+
+                            if response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Descargar ZIP",
+                                    data=response.content,
+                                    file_name="vacaciones_proporcionales.zip",
+                                    mime="application/zip",
+                                    use_container_width=True
+                                )
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
 
     else:
         st.info("📤 Carga un archivo para calcular vacaciones")
