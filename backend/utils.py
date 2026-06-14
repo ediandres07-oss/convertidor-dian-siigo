@@ -2,6 +2,69 @@ import pandas as pd
 from typing import List, Dict
 from datetime import datetime
 
+
+def calcular_prima(df_empleados: pd.DataFrame) -> List[Dict]:
+    """
+    Calcula prima de servicios: (salario + auxilio) * dias / 360
+    """
+    resultados = []
+
+    for _, emp in df_empleados.iterrows():
+        try:
+            documento = str(emp.get('documento', ''))
+            nombre = str(emp.get('nombre', ''))
+            salario = float(emp.get('salario_mensual', 0))
+            dias = float(emp.get('dias_laborados', 30))
+            auxilio = float(emp.get('auxilio_transporte', 0))
+
+            base_prima = salario + auxilio
+            valor_prima = (base_prima * dias) / 360
+
+            resultados.append({
+                'nombre': nombre,
+                'documento': documento,
+                'salario_mensual': round(salario, 2),
+                'auxilio_transporte': round(auxilio, 2),
+                'dias_laborados': dias,
+                'base_prima': round(base_prima, 2),
+                'valor_prima': round(valor_prima, 2)
+            })
+        except Exception as e:
+            print(f"Error procesando prima para {emp.get('nombre', 'unknown')}: {str(e)}")
+            continue
+
+    return resultados
+
+
+def calcular_vacaciones(df_empleados: pd.DataFrame) -> List[Dict]:
+    """
+    Calcula vacaciones proporcionales: salario * dias / 720
+    """
+    resultados = []
+
+    for _, emp in df_empleados.iterrows():
+        try:
+            documento = str(emp.get('documento', ''))
+            nombre = str(emp.get('nombre', ''))
+            salario = float(emp.get('salario_mensual', 0))
+            dias = float(emp.get('dias_laborados', 30))
+
+            valor_vacaciones = (salario * dias) / 720
+
+            resultados.append({
+                'nombre': nombre,
+                'documento': documento,
+                'salario_mensual': round(salario, 2),
+                'dias_laborados': dias,
+                'valor_vacaciones': round(valor_vacaciones, 2)
+            })
+        except Exception as e:
+            print(f"Error procesando vacaciones para {emp.get('nombre', 'unknown')}: {str(e)}")
+            continue
+
+    return resultados
+
+
 def calcular_liquidacion(df_empleados: pd.DataFrame, df_parametros: pd.DataFrame = None, df_novedades: pd.DataFrame = None) -> List[Dict]:
     """
     Calcula liquidación de nómina para empleados

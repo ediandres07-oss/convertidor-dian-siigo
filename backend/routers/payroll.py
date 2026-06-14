@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from io import BytesIO
-from ..utils import calcular_liquidacion, generar_pdf
+from ..utils import calcular_liquidacion, calcular_prima, calcular_vacaciones, generar_pdf
 
 router = APIRouter(prefix="/api", tags=["payroll"])
 
@@ -234,6 +234,142 @@ async def pdf_zip(file: UploadFile = File(...)):
             iter([zip_buffer.getvalue()]),
             media_type="application/zip",
             headers={"Content-Disposition": "attachment; filename=liquidaciones.zip"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/calcular-prima")
+async def calcular_prima_endpoint(file: UploadFile = File(...)):
+    """
+    Calcula prima de servicios: (salario + auxilio) * dias / 360
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        # Cargar empleados
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+
+        # Calcular prima
+        resultados = calcular_prima(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        return {
+            "success": True,
+            "total_empleados": len(resultados),
+            "empleados": resultados,
+            "total_prima": sum(e['valor_prima'] for e in resultados)
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/calcular-vacaciones")
+async def calcular_vacaciones_endpoint(file: UploadFile = File(...)):
+    """
+    Calcula vacaciones proporcionales: salario * dias / 720
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        # Cargar empleados
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+
+        # Calcular vacaciones
+        resultados = calcular_vacaciones(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        return {
+            "success": True,
+            "total_empleados": len(resultados),
+            "empleados": resultados,
+            "total_vacaciones": sum(e['valor_vacaciones'] for e in resultados)
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/exportar-excel-prima")
+async def exportar_excel_prima(file: UploadFile = File(...)):
+    """
+    Exporta Excel con cálculo de Prima de Servicios
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+        resultados = calcular_prima(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        df_resultado = pd.DataFrame(resultados)
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_resultado.to_excel(writer, sheet_name='Prima', index=False)
+
+            resumen = pd.DataFrame({
+                'Concepto': ['Total Empleados', 'Total Prima'],
+                'Valor': [len(resultados), sum(e['valor_prima'] for e in resultados)]
+            })
+            resumen.to_excel(writer, sheet_name='Resumen', index=False)
+
+        output.seek(0)
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=prima_servicios.xlsx"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/exportar-excel-vacaciones")
+async def exportar_excel_vacaciones(file: UploadFile = File(...)):
+    """
+    Exporta Excel con cálculo de Vacaciones Proporcionales
+    """
+    try:
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+        resultados = calcular_vacaciones(df_empleados)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        df_resultado = pd.DataFrame(resultados)
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_resultado.to_excel(writer, sheet_name='Vacaciones', index=False)
+
+            resumen = pd.DataFrame({
+                'Concepto': ['Total Empleados', 'Total Vacaciones'],
+                'Valor': [len(resultados), sum(e['valor_vacaciones'] for e in resultados)]
+            })
+            resumen.to_excel(writer, sheet_name='Resumen', index=False)
+
+        output.seek(0)
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=vacaciones_proporcionales.xlsx"}
         )
 
     except Exception as e:

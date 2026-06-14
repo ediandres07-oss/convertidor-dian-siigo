@@ -4,7 +4,7 @@ import pandas as pd
 import io
 import time
 
-API_URL = "http://127.0.0.1:8000"
+API = "http://127.0.0.1:8000"
 
 st.set_page_config(
     page_title="Sistema de Liquidaciones",
@@ -46,20 +46,28 @@ st.markdown('<div class="header-title">💼 Sistema de Liquidaciones de Nómina<
 # Sidebar
 with st.sidebar:
     st.title("🔧 Configuración")
-    st.write("Use este panel para cargar su archivo Excel con las siguientes hojas:")
+    st.write("Carga tu archivo Excel con las siguientes hojas:")
     st.info("""
     **Hojas requeridas:**
-    - **Empleados**: nombre, documento, salario_mensual, dias_laborados
+    - **Empleados**: nombre, documento, salario_mensual, dias_laborados, auxilio_transporte
 
     **Hojas opcionales:**
     - **Parametros**: salud, pension, fondo_solidaridad
     - **Novedades**: documento, tipo_novedad, valor
     """)
 
-# Área principal
-tab1, tab2, tab3, tab4 = st.tabs(["📤 Cargar Archivo", "📊 Resultados", "👤 Individual", "⚙️ Configuración"])
+# Crear 7 pestañas
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📤 Cargar",
+    "📊 Completa",
+    "💼 Prima",
+    "🏖️ Vacaciones",
+    "👤 Individual",
+    "📈 Comparativa",
+    "⚙️ Config"
+])
 
-# TAB 1: Cargar Archivo
+# ========== TAB 1: CARGAR ARCHIVO ==========
 with tab1:
     st.subheader("Carga tu archivo Excel")
 
@@ -70,258 +78,248 @@ with tab1:
     )
 
     if uploaded_file is not None:
-        # Guardar el archivo en sesión
         st.session_state.uploaded_file = uploaded_file
         st.session_state.archivo_name = uploaded_file.name
 
-        # Mostrar información del archivo
         st.success(f"✅ Archivo cargado: {uploaded_file.name}")
 
-        # Crear dos columnas
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if st.button("🔍 Procesar Archivo", key="process_btn", use_container_width=True):
-                with st.spinner("Procesando archivo..."):
-                    try:
-                        # Hacer request al API
-                        files = {'file': uploaded_file.getvalue()}
-                        response = requests.post(
-                            f"{API_URL}/api/procesar-completo",
-                            files=files,
-                            timeout=30
-                        )
-
-                        if response.status_code == 200:
-                            data = response.json()
-                            if "error" in data:
-                                st.error(f"❌ Error: {data['error']}")
-                            else:
-                                st.session_state.resultados = data
-                                st.success(f"✅ Procesado exitosamente!")
-                                st.info(f"📊 Total empleados: {data['total_empleados']} | Total neto: ${data['total_neto']:,.2f}")
-                                time.sleep(1)
-                                st.rerun()
-                        else:
-                            st.error(f"Error en el servidor: {response.status_code}")
-
-                    except requests.exceptions.ConnectionError:
-                        st.error("❌ No se puede conectar con el servidor. ¿Está corriendo el backend en puerto 8000?")
-                    except Exception as e:
-                        st.error(f"❌ Error: {str(e)}")
-
-        with col2:
-            # Mostrar vista previa del archivo
-            if st.button("👁️ Ver Vista Previa", key="preview_btn", use_container_width=True):
-                st.write("**Vista previa de datos:**")
+        # Procesar
+        if st.button("🔍 Procesar Archivo", use_container_width=True, key="process_main"):
+            with st.spinner("Procesando archivo..."):
                 try:
-                    df = pd.read_excel(uploaded_file, sheet_name='Empleados')
-                    st.dataframe(df.head(10), use_container_width=True)
+                    files = {'file': uploaded_file.getvalue()}
+                    response = requests.post(f"{API}/api/procesar-completo", files=files, timeout=30)
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        if "error" in data:
+                            st.error(f"❌ Error: {data['error']}")
+                        else:
+                            st.session_state.resultados = data
+                            st.success(f"✅ Procesado: {data['total_empleados']} empleados")
+                            st.info(f"💰 Total neto: ${data['total_neto']:,.2f}")
+                            time.sleep(1)
+                            st.rerun()
                 except Exception as e:
-                    st.error(f"Error al leer archivo: {e}")
+                    st.error(f"❌ Error: {str(e)}")
 
-        st.divider()
+        # Preview
+        if st.button("👁️ Ver Vista Previa", use_container_width=True):
+            try:
+                df = pd.read_excel(uploaded_file, sheet_name='Empleados')
+                st.write("**Primeras filas del archivo:**")
+                st.dataframe(df.head(10), use_container_width=True)
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-        # Descargas rápidas
-        st.subheader("📥 Descargar Resultados")
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            if st.button("📊 Excel Consolidado", key="download_excel", use_container_width=True):
-                with st.spinner("Generando Excel..."):
-                    try:
-                        files = {'file': uploaded_file.getvalue()}
-                        response = requests.post(
-                            f"{API_URL}/api/exportar-excel-desde-excel",
-                            files=files,
-                            timeout=30
-                        )
-
-                        if response.status_code == 200:
-                            st.download_button(
-                                label="⬇️ Descargar Excel",
-                                data=response.content,
-                                file_name="liquidaciones.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True
-                            )
-                        else:
-                            st.error("Error al generar Excel")
-
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-
-        with col2:
-            if st.button("📄 ZIP de PDFs", key="download_zip", use_container_width=True):
-                with st.spinner("Generando ZIP..."):
-                    try:
-                        files = {'file': uploaded_file.getvalue()}
-                        response = requests.post(
-                            f"{API_URL}/api/exportar-pdf-zip-desde-excel",
-                            files=files,
-                            timeout=30
-                        )
-
-                        if response.status_code == 200:
-                            st.download_button(
-                                label="⬇️ Descargar ZIP",
-                                data=response.content,
-                                file_name="liquidaciones.zip",
-                                mime="application/zip",
-                                use_container_width=True
-                            )
-                        else:
-                            st.error("Error al generar ZIP")
-
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-
-        with col3:
-            st.info("💡 Ve a la pestaña 'Individual' para descargar un PDF específico")
-
-
-# TAB 2: Resultados
+# ========== TAB 2: LIQUIDACIÓN COMPLETA ==========
 with tab2:
-    st.subheader("📊 Resultados de la Liquidación")
+    st.subheader("📊 Liquidación Completa")
 
     if "resultados" in st.session_state:
         datos = st.session_state.resultados
 
-        # Métricas globales
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
-            st.metric("👥 Total Empleados", datos['total_empleados'])
-
+            st.metric("👥 Empleados", datos['total_empleados'])
         with col2:
-            total_devengos = sum(e['total_devengos'] for e in datos['empleados'])
-            st.metric("💰 Total Devengos", f"${total_devengos:,.2f}")
-
+            total_dev = sum(e['total_devengos'] for e in datos['empleados'])
+            st.metric("💰 Devengos", f"${total_dev:,.0f}")
         with col3:
-            total_deducciones = sum(e['total_deducciones'] for e in datos['empleados'])
-            st.metric("📉 Total Deducciones", f"${total_deducciones:,.2f}")
-
+            total_ded = sum(e['total_deducciones'] for e in datos['empleados'])
+            st.metric("📉 Deducciones", f"${total_ded:,.0f}")
         with col4:
-            st.metric("💵 Total Neto", f"${datos['total_neto']:,.2f}")
+            st.metric("💵 Neto", f"${datos['total_neto']:,.0f}")
 
         st.divider()
-
-        # Tabla detallada
-        st.subheader("📋 Detalle por Empleado")
-
+        st.write("**Detalle por Empleado**")
         df_display = pd.DataFrame(datos['empleados'])
-
-        # Seleccionar columnas importantes para mostrar
-        cols_display = ['nombre', 'documento', 'salario_mensual', 'dias_laborados',
-                        'total_devengos', 'total_deducciones', 'neto_pagar']
-
-        df_show = df_display[cols_display].copy()
-        df_show.columns = ['Nombre', 'Documento', 'Salario', 'Días', 'Devengos', 'Deducciones', 'Neto']
-
-        # Formatear números
-        for col in ['Salario', 'Devengos', 'Deducciones', 'Neto']:
-            df_show[col] = df_show[col].apply(lambda x: f"${x:,.2f}")
-
-        st.dataframe(df_show, use_container_width=True, hide_index=True)
-
-        # Opciones de búsqueda
-        st.divider()
-        st.subheader("🔍 Búsqueda Avanzada")
-
-        search_term = st.text_input("Buscar por nombre o documento:", placeholder="Ej: Juan García")
-
-        if search_term:
-            df_filtered = df_display[
-                (df_display['nombre'].str.contains(search_term, case=False)) |
-                (df_display['documento'].str.contains(search_term))
-            ]
-
-            if not df_filtered.empty:
-                st.write(f"Se encontraron {len(df_filtered)} coincidencias:")
-                st.dataframe(df_filtered[cols_display], use_container_width=True, hide_index=True)
-            else:
-                st.warning("No se encontraron resultados")
+        cols = ['nombre', 'documento', 'salario_mensual', 'total_devengos', 'total_deducciones', 'neto_pagar']
+        st.dataframe(df_display[cols].rename(columns={
+            'nombre': 'Nombre',
+            'documento': 'Documento',
+            'salario_mensual': 'Salario',
+            'total_devengos': 'Devengos',
+            'total_deducciones': 'Deducciones',
+            'neto_pagar': 'Neto'
+        }), use_container_width=True, hide_index=True)
 
     else:
-        st.info("📤 Carga un archivo en la pestaña 'Cargar Archivo' para ver los resultados")
+        st.info("📤 Carga un archivo para ver los resultados")
 
-
-# TAB 3: Individual
+# ========== TAB 3: PRIMA DE SERVICIOS ==========
 with tab3:
+    st.subheader("💼 Prima de Servicios")
+    st.write("*Prima = (Salario + Auxilio) × Días / 360*")
+
+    if "uploaded_file" in st.session_state:
+        if st.button("📊 Calcular Prima", use_container_width=True, key="calc_prima"):
+            with st.spinner("Calculando prima..."):
+                try:
+                    files = {'file': st.session_state.uploaded_file.getvalue()}
+                    response = requests.post(f"{API}/api/calcular-prima", files=files, timeout=30)
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        if "error" in data:
+                            st.error(f"❌ {data['error']}")
+                        else:
+                            st.session_state.prima_data = data
+                            st.success(f"✅ Prima calculada para {data['total_empleados']} empleados")
+
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+
+        # Mostrar resultados
+        if "prima_data" in st.session_state:
+            datos = st.session_state.prima_data
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("👥 Empleados", datos['total_empleados'])
+            with col2:
+                st.metric("💰 Total Prima", f"${datos['total_prima']:,.0f}")
+
+            st.divider()
+
+            df_prima = pd.DataFrame(datos['empleados'])
+            st.dataframe(df_prima[[
+                'nombre', 'salario_mensual', 'auxilio_transporte', 'dias_laborados', 'valor_prima'
+            ]].rename(columns={
+                'nombre': 'Nombre',
+                'salario_mensual': 'Salario',
+                'auxilio_transporte': 'Auxilio',
+                'dias_laborados': 'Días',
+                'valor_prima': 'Prima'
+            }), use_container_width=True, hide_index=True)
+
+            # Botón descargar
+            if st.button("📥 Descargar Excel Prima", use_container_width=True):
+                with st.spinner("Generando Excel..."):
+                    try:
+                        files = {'file': st.session_state.uploaded_file.getvalue()}
+                        response = requests.post(f"{API}/api/exportar-excel-prima", files=files, timeout=30)
+
+                        if response.status_code == 200:
+                            st.download_button(
+                                label="⬇️ Descargar",
+                                data=response.content,
+                                file_name="prima_servicios.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True
+                            )
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+    else:
+        st.info("📤 Carga un archivo para calcular prima")
+
+# ========== TAB 4: VACACIONES ==========
+with tab4:
+    st.subheader("🏖️ Vacaciones Proporcionales")
+    st.write("*Vacaciones = Salario × Días / 720*")
+
+    if "uploaded_file" in st.session_state:
+        if st.button("📊 Calcular Vacaciones", use_container_width=True, key="calc_vaca"):
+            with st.spinner("Calculando vacaciones..."):
+                try:
+                    files = {'file': st.session_state.uploaded_file.getvalue()}
+                    response = requests.post(f"{API}/api/calcular-vacaciones", files=files, timeout=30)
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        if "error" in data:
+                            st.error(f"❌ {data['error']}")
+                        else:
+                            st.session_state.vacaciones_data = data
+                            st.success(f"✅ Vacaciones calculadas para {data['total_empleados']} empleados")
+
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+
+        # Mostrar resultados
+        if "vacaciones_data" in st.session_state:
+            datos = st.session_state.vacaciones_data
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("👥 Empleados", datos['total_empleados'])
+            with col2:
+                st.metric("🏖️ Total Vacaciones", f"${datos['total_vacaciones']:,.0f}")
+
+            st.divider()
+
+            df_vaca = pd.DataFrame(datos['empleados'])
+            st.dataframe(df_vaca[[
+                'nombre', 'salario_mensual', 'dias_laborados', 'valor_vacaciones'
+            ]].rename(columns={
+                'nombre': 'Nombre',
+                'salario_mensual': 'Salario',
+                'dias_laborados': 'Días',
+                'valor_vacaciones': 'Vacaciones'
+            }), use_container_width=True, hide_index=True)
+
+            # Botón descargar
+            if st.button("📥 Descargar Excel Vacaciones", use_container_width=True):
+                with st.spinner("Generando Excel..."):
+                    try:
+                        files = {'file': st.session_state.uploaded_file.getvalue()}
+                        response = requests.post(f"{API}/api/exportar-excel-vacaciones", files=files, timeout=30)
+
+                        if response.status_code == 200:
+                            st.download_button(
+                                label="⬇️ Descargar",
+                                data=response.content,
+                                file_name="vacaciones_proporcionales.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True
+                            )
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+    else:
+        st.info("📤 Carga un archivo para calcular vacaciones")
+
+# ========== TAB 5: INDIVIDUAL ==========
+with tab5:
     st.subheader("👤 Descargar PDF Individual")
 
     if "resultados" in st.session_state:
         datos = st.session_state.resultados
         empleados = datos['empleados']
 
-        # Crear lista de opciones
         opciones = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados}
 
         empleado_seleccionado = st.selectbox(
             "Selecciona un empleado:",
-            options=list(opciones.keys()),
-            help="Elige el empleado del que deseas descargar el PDF"
+            options=list(opciones.keys())
         )
 
         if empleado_seleccionado:
             documento = opciones[empleado_seleccionado]
-
-            # Encontrar empleado en los resultados
             emp = next((e for e in empleados if e['documento'] == documento), None)
 
             if emp:
-                # Mostrar información del empleado
-                st.write("### Información del Empleado")
-
                 col1, col2, col3, col4 = st.columns(4)
-
                 with col1:
-                    st.metric("Nombre", emp['nombre'])
+                    st.metric("Salario", f"${emp['salario_mensual']:,.0f}")
                 with col2:
-                    st.metric("Documento", emp['documento'])
+                    st.metric("Devengos", f"${emp['total_devengos']:,.0f}")
                 with col3:
-                    st.metric("Salario", f"${emp['salario_mensual']:,.2f}")
+                    st.metric("Deducciones", f"${emp['total_deducciones']:,.0f}")
                 with col4:
-                    st.metric("Días", int(emp['dias_laborados']))
+                    st.metric("NETO", f"${emp['neto_pagar']:,.0f}")
 
                 st.divider()
 
-                # Mostrar liquidación
-                st.write("### Liquidación")
-
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.write("**DEVENGOS**")
-                    st.write(f"- Salario Prorrateado: ${emp['salario_prorr']:,.2f}")
-                    st.write(f"- Cesantías: ${emp['cesantias']:,.2f}")
-                    st.write(f"- Intereses: ${emp['intereses_cesantias']:,.2f}")
-                    st.write(f"- Prima: ${emp['prima']:,.2f}")
-                    st.write(f"- Vacaciones: ${emp['vacaciones']:,.2f}")
-                    st.write(f"**Total: ${emp['total_devengos']:,.2f}**")
-
-                with col2:
-                    st.write("**DEDUCCIONES**")
-                    st.write(f"- Salud: ${emp['salud']:,.2f}")
-                    st.write(f"- Pensión: ${emp['pension']:,.2f}")
-                    if emp['fondo_solidaridad'] > 0:
-                        st.write(f"- Fondo Solidaridad: ${emp['fondo_solidaridad']:,.2f}")
-                    if emp['retencion'] > 0:
-                        st.write(f"- Retención: ${emp['retencion']:,.2f}")
-                    st.write(f"**Total: ${emp['total_deducciones']:,.2f}**")
-
-                st.divider()
-
-                # Botón para descargar PDF
                 if "uploaded_file" in st.session_state:
-                    if st.button("📄 Descargar PDF Individual", key="pdf_individual", use_container_width=True):
+                    if st.button("📄 Descargar PDF", use_container_width=True):
                         with st.spinner("Generando PDF..."):
                             try:
                                 files = {'file': st.session_state.uploaded_file.getvalue()}
                                 params = {'documento': documento}
                                 response = requests.post(
-                                    f"{API_URL}/api/exportar-pdf-individual-desde-excel",
+                                    f"{API}/api/exportar-pdf-individual-desde-excel",
                                     files=files,
                                     params=params,
                                     timeout=30
@@ -335,86 +333,89 @@ with tab3:
                                         mime="application/pdf",
                                         use_container_width=True
                                     )
-                                else:
-                                    st.error("Error al generar PDF")
-
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
 
-                st.metric("NETO A PAGAR", f"${emp['neto_pagar']:,.2f}", delta=None)
+    else:
+        st.info("📤 Carga un archivo para descargar PDFs")
+
+# ========== TAB 6: COMPARATIVA ==========
+with tab6:
+    st.subheader("📈 Comparativa: Prima vs Vacaciones")
+
+    if "prima_data" in st.session_state and "vacaciones_data" in st.session_state:
+        df_prima = pd.DataFrame(st.session_state.prima_data['empleados'])
+        df_vaca = pd.DataFrame(st.session_state.vacaciones_data['empleados'])
+
+        # Combinar
+        df_comp = pd.DataFrame({
+            'Nombre': df_prima['nombre'],
+            'Salario': df_prima['salario_mensual'],
+            'Prima': df_prima['valor_prima'],
+            'Vacaciones': df_vaca['valor_vacaciones'],
+            'Total': df_prima['valor_prima'] + df_vaca['valor_vacaciones']
+        })
+
+        st.dataframe(df_comp, use_container_width=True, hide_index=True)
+
+        st.divider()
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Prima", f"${df_prima['valor_prima'].sum():,.0f}")
+        with col2:
+            st.metric("Total Vacaciones", f"${df_vaca['valor_vacaciones'].sum():,.0f}")
+        with col3:
+            st.metric("TOTAL", f"${(df_prima['valor_prima'].sum() + df_vaca['valor_vacaciones'].sum()):,.0f}")
 
     else:
-        st.info("📤 Carga un archivo en la pestaña 'Cargar Archivo' para descargar PDFs individuales")
+        st.info("⚠️ Calcula Prima y Vacaciones primero para ver la comparativa")
 
+# ========== TAB 7: CONFIGURACIÓN ==========
+with tab7:
+    st.subheader("⚙️ Configuración")
 
-# TAB 4: Configuración
-with tab4:
-    st.subheader("⚙️ Configuración del Sistema")
-
+    # Estado del servidor
     st.write("### Estado del Servidor")
-
     try:
-        response = requests.get(f"{API_URL}/health", timeout=5)
+        response = requests.get(f"{API}/health", timeout=5)
         if response.status_code == 200:
-            st.success("✅ Backend conectado correctamente")
+            st.success("✅ Backend conectado")
         else:
-            st.error("❌ Backend no responde correctamente")
-    except requests.exceptions.ConnectionError:
-        st.error("❌ No se puede conectar con el backend en http://127.0.0.1:8000")
-        st.info("Asegúrate de ejecutar el servidor con: `uvicorn backend.main:app --reload`")
+            st.error("❌ Backend no responde")
+    except:
+        st.error("❌ No se puede conectar con el backend")
 
     st.divider()
 
-    st.write("### Estructura de Archivos Excel")
-
-    st.write("#### Hoja: Empleados (Requerida)")
-    st.dataframe(
-        pd.DataFrame({
-            'Columna': ['nombre', 'documento', 'salario_mensual', 'dias_laborados', 'cesantias_acum', 'vacaciones_acum'],
-            'Tipo': ['Texto', 'Texto/Número', 'Número', 'Número', 'Número', 'Número'],
-            'Descripción': [
-                'Nombre del empleado',
-                'Número de documento',
-                'Salario mensual',
-                'Días laborados en el período',
-                'Cesantías acumuladas',
-                'Vacaciones acumuladas'
-            ]
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.write("#### Hoja: Parametros (Opcional)")
-    st.dataframe(
-        pd.DataFrame({
-            'Columna': ['parametro', 'valor'],
-            'Ejemplo': ['salud', '4']
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.write("#### Hoja: Novedades (Opcional)")
-    st.dataframe(
-        pd.DataFrame({
-            'Columna': ['documento', 'tipo_novedad', 'valor'],
-            'Ejemplo': ['12345678', 'retencion', '50000']
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.divider()
-
-    st.write("### Cálculos Realizados")
+    st.write("### Estructura del Archivo Excel")
     st.info("""
-    - **Cesantías**: (Salario × Días) / 360
-    - **Intereses Cesantías**: Cesantías × 12%
-    - **Prima de Servicios**: (Salario × Días) / 360
-    - **Vacaciones**: (Salario × Días) / 720
-    - **Salud**: Salario × 4%
-    - **Pensión**: Salario × 4%
-    - **Fondo de Solidaridad**: Salario × 1% (si aplica)
-    - **NETO**: Total Devengos - Total Deducciones
+    **Hoja Empleados (Requerida)**
+    - nombre: Nombre del empleado
+    - documento: Número de documento
+    - salario_mensual: Salario mensual
+    - dias_laborados: Días trabajados
+    - auxilio_transporte: Auxilio (opcional)
+
+    **Hoja Parámetros (Opcional)**
+    - parametro: salud, pension, fondo_solidaridad
+    - valor: Porcentaje
+
+    **Hoja Novedades (Opcional)**
+    - documento: Documento del empleado
+    - tipo_novedad: Tipo (ej: retención)
+    - valor: Valor de la novedad
     """)
+
+    st.divider()
+
+    st.write("### Fórmulas Utilizadas")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**Prima de Servicios**")
+        st.code("(Salario + Auxilio) × Días ÷ 360")
+
+    with col2:
+        st.write("**Vacaciones Proporcionales**")
+        st.code("Salario × Días ÷ 720")
