@@ -1604,3 +1604,225 @@ def generate_balance_prueba(input_stream):
     wb.save(out)
     out.seek(0)
     return out
+
+
+# ========================================
+# LIQUIDACIONES DEFINITIVAS - NORMA COLOMBIANA
+# ========================================
+from datetime import datetime
+
+def calcular_dias_trabajados(fecha_ingreso, fecha_retiro):
+    """Calcula días trabajados entre dos fechas."""
+    try:
+        if isinstance(fecha_ingreso, str):
+            fecha_ingreso = datetime.strptime(fecha_ingreso, '%Y-%m-%d')
+        if isinstance(fecha_retiro, str):
+            fecha_retiro = datetime.strptime(fecha_retiro, '%Y-%m-%d')
+        dias = (fecha_retiro - fecha_ingreso).days
+        return max(0, dias)
+    except:
+        return 0
+
+def calcular_prestaciones_colombianas(salario, dias_trabajados, tipo_retiro):
+    """
+    Calcula prestaciones sociales según normativa colombiana.
+
+    Fórmulas:
+    - Cesantías: (Salario × Días trabajados) / 360
+    - Intereses cesantías: (Cesantías × 0.12 × Meses) / 12
+    - Prima: (Salario × Días trabajados semestre) / 360
+    - Vacaciones: (Salario × 15 días/año) / 30 (proporcional)
+    - Indemnización: varía según tipo de retiro
+    """
+    salario = float(salario or 0)
+    dias_trabajados = max(0, int(dias_trabajados or 0))
+
+    # Cesantías (fondo de cesantía)
+    cesantias = (salario * dias_trabajados) / 360
+
+    # Intereses sobre cesantías: 12% anual
+    meses_trabajados = dias_trabajados / 30
+    intereses_cesantias = (cesantias * 0.12 * meses_trabajados) / 12
+
+    # Prima de servicios (semestral: 180 días)
+    # Se calcula proporcional
+    prima = (salario * dias_trabajados) / 360
+
+    # Vacaciones: 15 días al año = 0.5 días por día trabajado
+    # Cálculo: (Salario / 30) × días proporcionales
+    dias_vacaciones_proporcionales = (dias_trabajados * 15) / 360
+    valor_vacaciones = (salario / 30) * dias_vacaciones_proporcionales
+
+    # Indemnización según tipo de retiro
+    indemnizacion = 0
+    if tipo_retiro == 'despido_sin_causa':
+        # Indemnización: 45 días de salario + prestaciones
+        indemnizacion = salario * 1.5  # Equivalente a 45 días
+    elif tipo_retiro == 'muerte' or tipo_retiro == 'jubilacion':
+        indemnizacion = 0  # No aplica indemnización
+
+    return {
+        'cesantias': cesantias,
+        'intereses_cesantias': intereses_cesantias,
+        'prima': prima,
+        'vacaciones': valor_vacaciones,
+        'indemnizacion': indemnizacion,
+        'dias_trabajados': dias_trabajados,
+        'meses_trabajados': meses_trabajados
+    }
+
+def generate_liquidaciones(empleados_data):
+    """Genera reporte de liquidaciones definitivas con norma colombiana."""
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+
+    # Hoja 1: Resumen
+    ws_resumen = wb.active
+    ws_resumen.title = 'Resumen'
+
+    # Estilos
+    header_fill = PatternFill(fill_type='solid', fgColor='1a3a5c')
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    subheader_fill = PatternFill(fill_type='solid', fgColor='2c3e50')
+    subheader_font = Font(bold=True, color='FFFFFF', size=10)
+    border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    num_fmt = '#,##0.00'
+    right_align = Alignment(horizontal='right', vertical='center')
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+    # Encabezados resumen
+    headers = ['Empleado', 'Salario', 'Días Trab.', 'Cesantías', 'Int. Cesantías',
+               'Prima', 'Vacaciones', 'Indemnización', 'Total Liquidación']
+    ws_resumen.append(headers)
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws_resumen.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = border
+
+    # Anchos
+    anchos = [25, 15, 12, 15, 15, 15, 15, 15, 18]
+    for idx, ancho in enumerate(anchos, 1):
+        ws_resumen.column_dimensions[get_column_letter(idx)].width = ancho
+
+    # Procesar empleados
+    totales = {col: 0 for col in ['cesantias', 'intereses_cesantias', 'prima',
+                                   'vacaciones', 'indemnizacion', 'total']}
+
+    for emp_idx, emp in enumerate(empleados_data):
+        nombre = emp.get('nombre', 'Sin nombre')
+        salario = float(emp.get('salario', 0))
+        fecha_ingreso = emp.get('fecha_ingreso', '')
+        fecha_retiro = emp.get('fecha_retiro', '')
+        tipo_retiro = emp.get('tipo_retiro', 'retiro_voluntario')
+
+        # Calcular días trabajados
+        dias_trabajados = calcular_dias_trabajados(fecha_ingreso, fecha_retiro)
+
+        # Calcular prestaciones
+        prestaciones = calcular_prestaciones_colombianas(salario, dias_trabajados, tipo_retiro)
+
+        total_liquidacion = (prestaciones['cesantias'] +
+                           prestaciones['intereses_cesantias'] +
+                           prestaciones['prima'] +
+                           prestaciones['vacaciones'] +
+                           prestaciones['indemnizacion'])
+
+        # Fila de datos
+        row = ws_resumen.max_row + 1
+        ws_resumen.cell(row=row, column=1, value=nombre)
+        ws_resumen.cell(row=row, column=2, value=salario)
+        ws_resumen.cell(row=row, column=3, value=dias_trabajados)
+        ws_resumen.cell(row=row, column=4, value=prestaciones['cesantias'])
+        ws_resumen.cell(row=row, column=5, value=prestaciones['intereses_cesantias'])
+        ws_resumen.cell(row=row, column=6, value=prestaciones['prima'])
+        ws_resumen.cell(row=row, column=7, value=prestaciones['vacaciones'])
+        ws_resumen.cell(row=row, column=8, value=prestaciones['indemnizacion'])
+        ws_resumen.cell(row=row, column=9, value=total_liquidacion)
+
+        # Formato
+        for col in range(1, 10):
+            cell = ws_resumen.cell(row=row, column=col)
+            cell.border = border
+            if col in [2, 4, 5, 6, 7, 8, 9]:
+                cell.number_format = num_fmt
+                cell.alignment = right_align
+
+        # Acumular totales
+        totales['cesantias'] += prestaciones['cesantias']
+        totales['intereses_cesantias'] += prestaciones['intereses_cesantias']
+        totales['prima'] += prestaciones['prima']
+        totales['vacaciones'] += prestaciones['vacaciones']
+        totales['indemnizacion'] += prestaciones['indemnizacion']
+        totales['total'] += total_liquidacion
+
+        # Hoja detallada por empleado
+        ws_detalle = wb.create_sheet(f'Detalles {emp_idx + 1}')
+        ws_detalle.append(['LIQUIDACIÓN DEFINITIVA - NORMA COLOMBIANA', '', ''])
+        ws_detalle.append(['Empleado:', nombre, ''])
+        ws_detalle.append(['Salario Mensual:', f'${salario:,.2f}', ''])
+        ws_detalle.append(['Fecha Ingreso:', fecha_ingreso, ''])
+        ws_detalle.append(['Fecha Retiro:', fecha_retiro, ''])
+        ws_detalle.append(['Días Trabajados:', dias_trabajados, ''])
+        ws_detalle.append(['Meses Trabajados:', f'{prestaciones["meses_trabajados"]:.1f}', ''])
+        ws_detalle.append(['Tipo de Retiro:', tipo_retiro, ''])
+        ws_detalle.append(['', '', ''])
+
+        # Detalles de conceptos
+        conceptos = [
+            ('Cesantías (Salario × Días / 360)', prestaciones['cesantias']),
+            ('Intereses sobre Cesantías (12% anual)', prestaciones['intereses_cesantias']),
+            ('Prima de Servicios (Salario × Días / 360)', prestaciones['prima']),
+            ('Vacaciones (Salario × 15 días/año ÷ 30)', prestaciones['vacaciones']),
+            ('Indemnización por Retiro', prestaciones['indemnizacion']),
+        ]
+
+        row = ws_detalle.max_row + 1
+        for concepto, valor in conceptos:
+            ws_detalle.append([concepto, f'${valor:,.2f}'])
+            ws_detalle.cell(row=ws_detalle.max_row, column=1).font = Font(size=10)
+            ws_detalle.cell(row=ws_detalle.max_row, column=2).number_format = num_fmt
+            ws_detalle.cell(row=ws_detalle.max_row, column=2).font = Font(bold=True)
+
+        # Total
+        ws_detalle.append(['TOTAL LIQUIDACIÓN', f'${total_liquidacion:,.2f}'])
+        total_row = ws_detalle.max_row
+        ws_detalle.cell(row=total_row, column=1).font = Font(bold=True, size=11)
+        ws_detalle.cell(row=total_row, column=2).font = Font(bold=True, size=11)
+        ws_detalle.cell(row=total_row, column=2).fill = PatternFill(fill_type='solid', fgColor='d4e8f0')
+        ws_detalle.cell(row=total_row, column=2).number_format = num_fmt
+
+        # Anchos
+        ws_detalle.column_dimensions['A'].width = 40
+        ws_detalle.column_dimensions['B'].width = 20
+
+    # Fila de totales en resumen
+    row = ws_resumen.max_row + 1
+    ws_resumen.cell(row=row, column=1, value='TOTAL').font = Font(bold=True, size=11)
+    ws_resumen.cell(row=row, column=2, value='').font = Font(bold=True, size=11)
+    ws_resumen.cell(row=row, column=3, value='').font = Font(bold=True, size=11)
+    ws_resumen.cell(row=row, column=4, value=totales['cesantias']).number_format = num_fmt
+    ws_resumen.cell(row=row, column=5, value=totales['intereses_cesantias']).number_format = num_fmt
+    ws_resumen.cell(row=row, column=6, value=totales['prima']).number_format = num_fmt
+    ws_resumen.cell(row=row, column=7, value=totales['vacaciones']).number_format = num_fmt
+    ws_resumen.cell(row=row, column=8, value=totales['indemnizacion']).number_format = num_fmt
+    ws_resumen.cell(row=row, column=9, value=totales['total']).number_format = num_fmt
+
+    for col in range(1, 10):
+        cell = ws_resumen.cell(row=row, column=col)
+        cell.font = Font(bold=True, size=11)
+        cell.fill = PatternFill(fill_type='solid', fgColor='d4e8f0')
+        cell.border = border
+        if col in [4, 5, 6, 7, 8, 9]:
+            cell.alignment = right_align
+
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return out

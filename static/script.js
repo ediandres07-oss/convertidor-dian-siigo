@@ -208,4 +208,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ============================================================
+    // 4. LIQUIDACIONES DEFINITIVAS, VACACIONES Y PRIMAS
+    // ============================================================
+    let employees = [];
+
+    function renderEmployeesTable() {
+        const employeesTbody = document.getElementById('employees-tbody');
+        if (!employeesTbody) return;
+
+        employeesTbody.innerHTML = employees.map((emp, idx) => `
+            <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="border:1px solid #e2e8f0;padding:.5rem;"><input type="text" value="${emp.nombre}" placeholder="Nombre" style="width:100%;border:1px solid #e2e8f0;padding:.3rem;border-radius:3px;font-size:.8rem;" data-idx="${idx}" data-field="nombre" class="emp-input"></td>
+                <td style="border:1px solid #e2e8f0;padding:.5rem;text-align:right;"><input type="number" value="${emp.salario}" placeholder="Salario" style="width:100%;border:1px solid #e2e8f0;padding:.3rem;border-radius:3px;text-align:right;font-size:.8rem;" data-idx="${idx}" data-field="salario" class="emp-input"></td>
+                <td style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;"><input type="date" value="${emp.fecha_ingreso}" style="width:100%;border:1px solid #e2e8f0;padding:.3rem;border-radius:3px;font-size:.8rem;" data-idx="${idx}" data-field="fecha_ingreso" class="emp-input"></td>
+                <td style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;"><input type="date" value="${emp.fecha_retiro}" style="width:100%;border:1px solid #e2e8f0;padding:.3rem;border-radius:3px;font-size:.8rem;" data-idx="${idx}" data-field="fecha_retiro" class="emp-input"></td>
+                <td style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">
+                    <select style="width:100%;border:1px solid #e2e8f0;padding:.3rem;border-radius:3px;font-size:.8rem;" data-idx="${idx}" data-field="tipo_retiro" class="emp-input">
+                        <option value="retiro_voluntario" ${emp.tipo_retiro === 'retiro_voluntario' ? 'selected' : ''}>Retiro Voluntario</option>
+                        <option value="despido_justificado" ${emp.tipo_retiro === 'despido_justificado' ? 'selected' : ''}>Despido Justificado</option>
+                        <option value="despido_sin_causa" ${emp.tipo_retiro === 'despido_sin_causa' ? 'selected' : ''}>Despido Sin Causa</option>
+                        <option value="jubilacion" ${emp.tipo_retiro === 'jubilacion' ? 'selected' : ''}>Jubilación</option>
+                        <option value="muerte" ${emp.tipo_retiro === 'muerte' ? 'selected' : ''}>Muerte</option>
+                    </select>
+                </td>
+                <td style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">
+                    <button type="button" class="delete-btn" data-idx="${idx}" title="Eliminar" style="background:#ef4444;color:white;border:none;padding:4px 8px;border-radius:3px;cursor:pointer;font-size:.7rem;">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Attach input listeners
+        document.querySelectorAll('.emp-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                const field = e.target.dataset.field;
+                let value;
+                if (field === 'salario') {
+                    value = parseFloat(e.target.value) || 0;
+                } else {
+                    value = e.target.value;
+                }
+                if (employees[idx]) employees[idx][field] = value;
+            });
+        });
+
+        // Attach delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const idx = parseInt(e.target.dataset.idx);
+                employees.splice(idx, 1);
+                renderEmployeesTable();
+            });
+        });
+    }
+
+    const addEmployeeBtn = document.getElementById('add-employee-btn');
+    if (addEmployeeBtn) {
+        addEmployeeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const hoy = new Date().toISOString().split('T')[0];
+            employees.push({
+                nombre: '',
+                salario: 0,
+                fecha_ingreso: hoy,
+                fecha_retiro: hoy,
+                tipo_retiro: 'retiro_voluntario'
+            });
+            renderEmployeesTable();
+        });
+    }
+
+    const generateLiquidacionBtn = document.getElementById('generate-liquidacion-btn');
+    if (generateLiquidacionBtn) {
+        generateLiquidacionBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (employees.length === 0) {
+                showMsg('liquidacion-message', '⚠️ Agrega al menos un empleado.', true);
+                return;
+            }
+            const msgLiq = document.getElementById('liquidacion-message');
+            if (msgLiq) msgLiq.innerHTML = '';
+            setLoading('generate-liquidacion-btn', 'spinner-liquidacion', true);
+            try {
+                const res = await fetch('/api/liquidaciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empleados: employees })
+                });
+                if (!res.ok) {
+                    const j = await res.json();
+                    throw new Error(j.error || `Error ${res.status}`);
+                }
+                await downloadBlob(res, 'LIQUIDACIONES.xlsx');
+                showMsg('liquidacion-message', '✅ Reporte de liquidaciones generado correctamente.', false);
+            } catch (err) {
+                showMsg('liquidacion-message', `❌ ${err.message}`, true);
+            } finally {
+                setLoading('generate-liquidacion-btn', 'spinner-liquidacion', false);
+            }
+        });
+    }
+
 });

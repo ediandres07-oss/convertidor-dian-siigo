@@ -146,6 +146,52 @@
                 </div>
                 <div id="nomina-message" style="margin-top:.75rem;font-size:.85rem;"></div>
             </div>
+
+            <!-- Sección Liquidaciones Definitivas -->
+            <div style="margin-top:2rem;border-top:1px solid #e2e8f0;padding-top:1.5rem;">
+                <h3 style="font-size:1rem;font-weight:600;margin-bottom:.5rem;">Liquidaciones Definitivas (Norma Colombiana)</h3>
+                <p style="font-size:.85rem;color:#64748b;margin-bottom:1rem;">Cálculo de prestaciones sociales: cesantías, primas, vacaciones, intereses e indemnizaciones según normativa colombiana.</p>
+
+                <div style="margin-bottom:1.5rem;">
+                    <button type="button" id="add-employee-btn" class="btn-secondary" style="white-space:nowrap;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:4px;">
+                            <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Agregar Empleado
+                    </button>
+                </div>
+
+                <div id="employees-table-container" style="overflow-x:auto;margin-bottom:1rem;">
+                    <table id="employees-table" style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead style="background:#1a3a5c;color:white;">
+                            <tr>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:left;">Nombre</th>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:right;">Salario</th>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">Fecha Ingreso</th>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">Fecha Retiro</th>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">Tipo Retiro</th>
+                                <th style="border:1px solid #e2e8f0;padding:.5rem;text-align:center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employees-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <button type="button" id="generate-liquidacion-btn" class="btn-secondary" style="white-space:nowrap;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:4px;">
+                            <path d="M9 17H7A5 5 0 0 1 7 7h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M15 7h2a5 5 0 0 1 0 10h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Generar Liquidaciones
+                        <div class="spinner" id="spinner-liquidacion" style="display:none;"></div>
+                    </button>
+                </div>
+                <div id="liquidacion-message" style="margin-top:.75rem;font-size:.85rem;"></div>
+            </div>
         </div>
     </main>
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Liquidaciones</title>
+</head>
+<body>
+    <button type="button" id="add-employee-btn" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; cursor: pointer;">
+        Agregar Empleado
+    </button>
+
+    <table id="employees-table" style="margin-top: 20px; border-collapse: collapse; width: 100%;">
+        <thead>
+            <tr style="background: #f1f5f9;">
+                <th style="border: 1px solid #ccc; padding: 10px;">Nombre</th>
+                <th style="border: 1px solid #ccc; padding: 10px;">Salario</th>
+            </tr>
+        </thead>
+        <tbody id="employees-tbody"></tbody>
+    </table>
+
+    <button type="button" id="generate-liquidacion-btn" style="margin-top: 20px; padding: 10px 20px; background: #10b981; color: white; border: none; cursor: pointer;">
+        Generar Reporte
+    </button>
+
+    <div id="liquidacion-message" style="margin-top: 20px;"></div>
+
+    <script>
+        let employees = [];
+
+        function renderEmployeesTable() {
+            const employeesTbody = document.getElementById('employees-tbody');
+            if (!employeesTbody) return;
+
+            employeesTbody.innerHTML = employees.map((emp, idx) => `
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">
+                        <input type="text" value="${emp.nombre}" placeholder="Nombre" data-idx="${idx}" data-field="nombre" class="emp-input" style="width: 100%;">
+                    </td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">
+                        <input type="number" value="${emp.salario}" placeholder="Salario" data-idx="${idx}" data-field="salario" class="emp-input" style="width: 100%;">
+                    </td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">
+                        <button type="button" data-idx="${idx}" class="delete-btn" style="background: #ef4444; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Attach input listeners
+            document.querySelectorAll('.emp-input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    const field = e.target.dataset.field;
+                    const value = field === 'salario' ? parseFloat(e.target.value) || 0 : e.target.value;
+                    if (employees[idx]) employees[idx][field] = value;
+                });
+            });
+
+            // Attach delete buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    employees.splice(idx, 1);
+                    renderEmployeesTable();
+                });
+            });
+        }
+
+        const addEmployeeBtn = document.getElementById('add-employee-btn');
+        if (addEmployeeBtn) {
+            addEmployeeBtn.addEventListener('click', (e) => {
+                console.log('Botón de agregar empleado clickeado');
+                employees.push({
+                    nombre: '',
+                    salario: 0
+                });
+                renderEmployeesTable();
+            });
+        }
+
+        const generateLiquidacionBtn = document.getElementById('generate-liquidacion-btn');
+        if (generateLiquidacionBtn) {
+            generateLiquidacionBtn.addEventListener('click', async (e) => {
+                console.log('Botón de generar reporte clickeado');
+                if (employees.length === 0) {
+                    document.getElementById('liquidacion-message').innerHTML = '<span style="color: red;">Agrega al menos un empleado.</span>';
+                    return;
+                }
+                document.getElementById('liquidacion-message').innerHTML = '<span style="color: green;">✅ Simulación: Se enviarían estos empleados al servidor:</span><pre>' + JSON.stringify(employees, null, 2) + '</pre>';
+            });
+        }
+
+        console.log('Script cargado - Empleados:', employees);
+    </script>
+</body>
+</html>

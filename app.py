@@ -1,7 +1,8 @@
 from flask import Flask, request, send_file, render_template
 import io
+import json
 import traceback
-from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba
+from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -152,5 +153,31 @@ def balance():
         return {'error': f'Error generando balance: {str(e)}'}, 500
 
 
+@app.route('/api/liquidaciones', methods=['POST'])
+def liquidaciones():
+    try:
+        data = request.get_json()
+        if not data or 'empleados' not in data:
+            return {'error': 'No se proporcionaron datos de empleados'}, 400
+
+        empleados = data['empleados']
+        # Validar que al menos un empleado tenga nombre
+        if not any(emp.get('nombre', '').strip() for emp in empleados):
+            return {'error': 'Todos los empleados deben tener un nombre'}, 400
+
+        output_stream = generate_liquidaciones(empleados)
+        return send_file(
+            output_stream,
+            as_attachment=True,
+            download_name='LIQUIDACIONES.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error generando liquidaciones: {str(e)}'}, 500
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    import os
+    port = int(os.environ.get('PORT', 8080))
+    app.run(debug=True, port=port, host='127.0.0.1')
