@@ -56,14 +56,15 @@ with st.sidebar:
     - **Novedades**: documento, tipo_novedad, valor
     """)
 
-# Crear 7 pestañas
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+# Crear 8 pestañas
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📤 Cargar",
     "📊 Completa",
     "💼 Prima",
     "🏖️ Vacaciones",
     "👤 Individual",
     "📈 Comparativa",
+    "🧮 SIIGO",
     "⚙️ Config"
 ])
 
@@ -413,8 +414,86 @@ with tab6:
     else:
         st.info("⚠️ Calcula Prima y Vacaciones primero para ver la comparativa")
 
-# ========== TAB 7: CONFIGURACIÓN ==========
+# ========== TAB 7: SIIGO ==========
 with tab7:
+    st.subheader("🧮 Generador de Archivo Plano SIIGO")
+    st.write("*Crea archivo plano compatible con SIIGO para cargar asientos contables*")
+
+    if "uploaded_file" in st.session_state:
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            st.write("Genera archivo plano con todos los asientos contables de nómina")
+
+        with col2:
+            if st.button("🧮 Generar Plano", use_container_width=True, key="gen_siigo"):
+                with st.spinner("Generando archivo plano..."):
+                    try:
+                        files = {'file': st.session_state.uploaded_file.getvalue()}
+                        response = requests.post(f"{API}/api/generar-plano-siigo", files=files, timeout=30)
+
+                        if response.status_code == 200:
+                            st.success("✅ Archivo plano generado")
+                            st.download_button(
+                                label="⬇️ Descargar plano_siigo.txt",
+                                data=response.content,
+                                file_name="plano_siigo.txt",
+                                mime="text/plain",
+                                use_container_width=True
+                            )
+                        else:
+                            st.error("Error al generar archivo")
+
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+        st.divider()
+
+        st.write("### 📋 Formato del Archivo Plano")
+        st.code(
+            "NOMINA;5105;1020304050;Maria Gomez;2200000.00;D;01\n"
+            "NOMINA;510530;1020304050;Maria Gomez;183333.33;D;01\n"
+            "NOMINA;237005;1020304050;Maria Gomez;88000.00;C;01\n"
+            "NOMINA;111005;1020304050;Maria Gomez;2432333.33;C;01",
+            language="csv"
+        )
+
+        st.write("**Campos:**")
+        st.markdown("""
+        1. **TIPO** - Tipo de movimiento (NOMINA)
+        2. **CUENTA** - Cuenta contable
+           - 5105: Salarios
+           - 510530: Cesantías
+           - 510536: Prima
+           - 510539: Vacaciones
+           - 237005: Salud
+           - 238030: Pensión
+           - 111005: Bancos
+        3. **DOCUMENTO** - Cédula del empleado
+        4. **NOMBRE** - Nombre del empleado
+        5. **VALOR** - Valor del movimiento
+        6. **DEBITO/CREDITO** - D (Débito) o C (Crédito)
+        7. **CENTRO_COSTOS** - Centro de costos (01)
+        """)
+
+        st.divider()
+
+        st.write("### 🚀 Cómo Usar en SIIGO")
+        st.markdown("""
+        1. Descarga el archivo plano desde esta pestaña
+        2. Abre SIIGO
+        3. Ve a: **Contabilidad → Comprobantes → Importar**
+        4. Selecciona el archivo `plano_siigo.txt`
+        5. Valida los asientos
+        6. Graba el comprobante
+        """)
+
+    else:
+        st.info("📤 Carga un archivo para generar el plano SIIGO")
+
+
+# ========== TAB 8: CONFIGURACIÓN ==========
+with tab8:
     st.subheader("⚙️ Configuración")
 
     # Estado del servidor

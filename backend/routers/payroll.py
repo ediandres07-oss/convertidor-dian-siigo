@@ -240,6 +240,204 @@ async def pdf_zip(file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
+@router.post("/generar-plano-siigo")
+async def generar_plano_siigo(file: UploadFile = File(...)):
+    """
+    Genera archivo plano compatible con SIIGO
+    """
+    try:
+        from ..utils import calcular_liquidacion
+        import io as io_module
+
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        # Cargar empleados
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+
+        # Cargar parámetros si existen
+        df_parametros = None
+        try:
+            excel_bytes.seek(0)
+            df_parametros = pd.read_excel(excel_bytes, sheet_name='Parametros')
+        except:
+            pass
+
+        # Cargar novedades si existen
+        df_novedades = None
+        try:
+            excel_bytes.seek(0)
+            df_novedades = pd.read_excel(excel_bytes, sheet_name='Novedades', dtype={'documento': str})
+        except:
+            pass
+
+        # Calcular liquidación completa
+        resultados = calcular_liquidacion(df_empleados, df_parametros, df_novedades)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        # Generar asientos contables
+        asientos = []
+
+        cuentas = {
+            'salarios': '5105',
+            'cesantias': '510530',
+            'intereses_cesantias': '510533',
+            'prima': '510536',
+            'vacaciones': '510539',
+            'salud': '237005',
+            'pension': '238030',
+            'fondo_solidaridad': '238095',
+            'retencion_fuente': '236540',
+            'bancos': '111005',
+        }
+
+        centro_costos = '01'
+
+        for emp in resultados:
+            documento = emp['documento']
+            nombre = emp['nombre']
+
+            # DEVENGOS (Débito)
+            if emp.get('salario_prorr', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['salarios'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['salario_prorr'], 2),
+                    'debito_credito': 'D',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('cesantias', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['cesantias'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['cesantias'], 2),
+                    'debito_credito': 'D',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('intereses_cesantias', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['intereses_cesantias'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['intereses_cesantias'], 2),
+                    'debito_credito': 'D',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('prima', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['prima'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['prima'], 2),
+                    'debito_credito': 'D',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('vacaciones', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['vacaciones'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['vacaciones'], 2),
+                    'debito_credito': 'D',
+                    'centro_costos': centro_costos
+                })
+
+            # DEDUCCIONES (Crédito)
+            if emp.get('salud', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['salud'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['salud'], 2),
+                    'debito_credito': 'C',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('pension', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['pension'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['pension'], 2),
+                    'debito_credito': 'C',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('fondo_solidaridad', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['fondo_solidaridad'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['fondo_solidaridad'], 2),
+                    'debito_credito': 'C',
+                    'centro_costos': centro_costos
+                })
+
+            if emp.get('retencion', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['retencion_fuente'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['retencion'], 2),
+                    'debito_credito': 'C',
+                    'centro_costos': centro_costos
+                })
+
+            # NETO A PAGAR
+            if emp.get('neto_pagar', 0) > 0:
+                asientos.append({
+                    'tipo': 'NOMINA',
+                    'cuenta': cuentas['bancos'],
+                    'documento': documento,
+                    'nombre': nombre,
+                    'valor': round(emp['neto_pagar'], 2),
+                    'debito_credito': 'C',
+                    'centro_costos': centro_costos
+                })
+
+        # Generar archivo plano
+        plano_content = io_module.StringIO()
+        for asiento in asientos:
+            linea = (
+                f"{asiento['tipo']};"
+                f"{asiento['cuenta']};"
+                f"{asiento['documento']};"
+                f"{asiento['nombre']};"
+                f"{asiento['valor']:.2f};"
+                f"{asiento['debito_credito']};"
+                f"{asiento['centro_costos']}\n"
+            )
+            plano_content.write(linea)
+
+        plano_bytes = plano_content.getvalue().encode('utf-8')
+
+        return StreamingResponse(
+            iter([plano_bytes]),
+            media_type="text/plain",
+            headers={"Content-Disposition": "attachment; filename=plano_siigo.txt"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.post("/exportar-pdf-prima-zip")
 async def exportar_pdf_prima_zip(file: UploadFile = File(...)):
     """
