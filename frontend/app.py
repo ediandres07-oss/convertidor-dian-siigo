@@ -56,8 +56,8 @@ with st.sidebar:
     - **Novedades**: documento, tipo_novedad, valor
     """)
 
-# Crear 8 pestañas
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+# Crear 9 pestañas
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📤 Cargar",
     "📊 Completa",
     "💼 Prima",
@@ -65,6 +65,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "👤 Individual",
     "📈 Comparativa",
     "🧮 SIIGO",
+    "🔄 Convertir TXT",
     "⚙️ Config"
 ])
 
@@ -535,8 +536,65 @@ with tab7:
         st.info("📤 Carga un archivo para generar el plano SIIGO")
 
 
-# ========== TAB 8: CONFIGURACIÓN ==========
+# ========== TAB 8: CONVERTIR TXT A EXCEL ==========
 with tab8:
+    st.subheader("🔄 Convertir Plano TXT a Excel")
+    st.write("*Convierte archivo plano SIIGO (TXT) a Excel con validaciones*")
+
+    uploaded_txt = st.file_uploader(
+        "Selecciona archivo TXT",
+        type=["txt"],
+        help="Archivo plano separado por punto y coma (;)"
+    )
+
+    if uploaded_txt is not None:
+        st.success(f"✅ Archivo cargado: {uploaded_txt.name}")
+
+        if st.button("🔄 Convertir a Excel", use_container_width=True, key="convert_txt"):
+            with st.spinner("Convirtiendo archivo..."):
+                try:
+                    files = {'file': uploaded_txt.getvalue()}
+                    response = requests.post(f"{API}/api/convertir-plano-txt-a-excel", files=files, timeout=30)
+
+                    if response.status_code == 200:
+                        st.success("✅ Conversión exitosa")
+                        st.download_button(
+                            label="⬇️ Descargar Excel",
+                            data=response.content,
+                            file_name="plano_siigo_convertido.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        st.error("Error al convertir archivo")
+
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+        st.divider()
+
+        st.write("### 📋 Qué Incluye el Excel")
+        st.markdown("""
+        1. **Plano** - Todos los asientos del archivo original
+        2. **Validacion** - Balance contable (Débitos vs Créditos)
+        3. **Por Cuenta** - Agrupado por cuenta contable
+        4. **Por Empleado** - Agrupado por empleado
+        """)
+
+        st.write("### 📊 Formato del Archivo TXT")
+        st.code(
+            "NOMINA;5105;1020304050;Maria Gomez;2200000.00;D\n"
+            "NOMINA;237005;1020304050;Maria Gomez;88000.00;C\n"
+            "NOMINA;111005;1020304050;Maria Gomez;2112000.00;C",
+            language="csv"
+        )
+
+    else:
+        st.info("📂 Carga un archivo TXT para convertirlo a Excel")
+
+
+# ========== TAB 9: CONFIGURACIÓN ==========
+with tab9:
     st.subheader("⚙️ Configuración")
 
     # Estado del servidor

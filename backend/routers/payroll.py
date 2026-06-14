@@ -438,6 +438,98 @@ async def generar_plano_siigo(file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
+@router.post("/convertir-plano-txt-a-excel")
+async def convertir_plano_txt_a_excel(file: UploadFile = File(...)):
+    """
+    Convierte archivo plano TXT de SIIGO a Excel con múltiples hojas de validación
+    """
+    try:
+        # Leer archivo TXT
+        contenido = await file.read()
+        lineas = contenido.decode('utf-8').strip().split('\n')
+
+        # Procesar líneas
+        columnas = ['tipo', 'cuenta', 'documento', 'nombre', 'valor', 'naturaleza']
+        datos = []
+
+        for linea in lineas:
+            if linea.strip():
+                campos = linea.split(';')
+                if len(campos) >= 6:
+                    datos.append({
+                        'tipo': campos[0],
+                        'cuenta': campos[1],
+                        'documento': campos[2],
+                        'nombre': campos[3],
+                        'valor': float(campos[4]),
+                        'naturaleza': campos[5]
+                    })
+
+        if not datos:
+            return {"error": "No se encontraron datos válidos en el archivo"}
+
+        df = pd.DataFrame(datos)
+
+        # Validación contable
+        debitos = df[df['naturaleza'] == 'D']['valor'].sum()
+        creditos = df[df['naturaleza'] == 'C']['valor'].sum()
+        diferencia = abs(debitos - creditos)
+        balanceado = diferencia < 0.01
+
+        # Descripciones de cuentas
+        cuentas_desc = {
+            '5105': 'Salarios',
+            '510530': 'Cesantías',
+            '510533': 'Intereses Cesantías',
+            '510536': 'Prima de Servicios',
+            '510539': 'Vacaciones',
+            '237005': 'Salud',
+            '238030': 'Pensión',
+            '238095': 'Fondo Solidaridad',
+            '236540': 'Retención en la Fuente',
+            '111005': 'Bancos'
+        }
+
+        df['descripcion'] = df['cuenta'].map(cuentas_desc).fillna('Otros')
+
+        # Resumen por cuenta
+        resumen_cuenta = df.groupby(['cuenta', 'descripcion', 'naturaleza'])['valor'].sum().reset_index()
+        resumen_cuenta.columns = ['Cuenta', 'Descripción', 'Naturaleza', 'Valor']
+
+        # Resumen por empleado
+        resumen_empleado = df.groupby(['documento', 'nombre'])['valor'].sum().reset_index()
+        resumen_empleado.columns = ['Documento', 'Nombre', 'Total']
+
+        # Validación
+        validacion = pd.DataFrame([{
+            'Total Débitos': round(debitos, 2),
+            'Total Créditos': round(creditos, 2),
+            'Diferencia': round(diferencia, 2),
+            'Estado': 'BALANCEADO' if balanceado else 'DESBALANCEADO'
+        }])
+
+        # Exportar
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df[['tipo', 'cuenta', 'descripcion', 'documento', 'nombre', 'valor', 'naturaleza']].to_excel(
+                writer, sheet_name='Plano', index=False
+            )
+            validacion.to_excel(writer, sheet_name='Validacion', index=False)
+            resumen_cuenta.to_excel(writer, sheet_name='Por Cuenta', index=False)
+            resumen_empleado.to_excel(writer, sheet_name='Por Empleado', index=False)
+
+        output.seek(0)
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=plano_siigo_convertido.xlsx"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.post("/exportar-plano-siigo-excel")
 async def exportar_plano_siigo_excel(file: UploadFile = File(...)):
     """
