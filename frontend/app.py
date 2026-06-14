@@ -420,26 +420,49 @@ with tab7:
     st.write("*Crea archivo plano compatible con SIIGO para cargar asientos contables*")
 
     if "uploaded_file" in st.session_state:
-        col1, col2 = st.columns([3, 1])
+        st.write("Genera archivos plano con todos los asientos contables de nómina")
+
+        col1, col2 = st.columns(2)
 
         with col1:
-            st.write("Genera archivo plano con todos los asientos contables de nómina")
-
-        with col2:
-            if st.button("🧮 Generar Plano", use_container_width=True, key="gen_siigo"):
-                with st.spinner("Generando archivo plano..."):
+            if st.button("📄 Generar TXT", use_container_width=True, key="gen_siigo_txt"):
+                with st.spinner("Generando archivo plano TXT..."):
                     try:
                         files = {'file': st.session_state.uploaded_file.getvalue()}
                         response = requests.post(f"{API}/api/generar-plano-siigo", files=files, timeout=30)
 
                         if response.status_code == 200:
-                            st.success("✅ Archivo plano generado")
+                            st.success("✅ Archivo TXT generado")
                             st.download_button(
                                 label="⬇️ Descargar plano_siigo.txt",
                                 data=response.content,
                                 file_name="plano_siigo.txt",
                                 mime="text/plain",
-                                use_container_width=True
+                                use_container_width=True,
+                                key="down_txt"
+                            )
+                        else:
+                            st.error("Error al generar archivo")
+
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+        with col2:
+            if st.button("📊 Generar Excel", use_container_width=True, key="gen_siigo_xlsx"):
+                with st.spinner("Generando archivo plano Excel..."):
+                    try:
+                        files = {'file': st.session_state.uploaded_file.getvalue()}
+                        response = requests.post(f"{API}/api/exportar-plano-siigo-excel", files=files, timeout=30)
+
+                        if response.status_code == 200:
+                            st.success("✅ Archivo Excel generado")
+                            st.download_button(
+                                label="⬇️ Descargar plano_siigo.xlsx",
+                                data=response.content,
+                                file_name="plano_siigo.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True,
+                                key="down_xlsx"
                             )
                         else:
                             st.error("Error al generar archivo")
@@ -449,31 +472,51 @@ with tab7:
 
         st.divider()
 
-        st.write("### 📋 Formato del Archivo Plano")
-        st.code(
-            "NOMINA;5105;1020304050;Maria Gomez;2200000.00;D;01\n"
-            "NOMINA;510530;1020304050;Maria Gomez;183333.33;D;01\n"
-            "NOMINA;237005;1020304050;Maria Gomez;88000.00;C;01\n"
-            "NOMINA;111005;1020304050;Maria Gomez;2432333.33;C;01",
-            language="csv"
-        )
+        st.write("### 📋 Formatos Disponibles")
 
-        st.write("**Campos:**")
+        tab_txt, tab_xlsx = st.tabs(["📄 Formato TXT", "📊 Formato Excel"])
+
+        with tab_txt:
+            st.write("**Archivo separado por punto y coma (;)**")
+            st.code(
+                "NOMINA;5105;1020304050;Maria Gomez;2200000.00;D;01\n"
+                "NOMINA;510530;1020304050;Maria Gomez;183333.33;D;01\n"
+                "NOMINA;237005;1020304050;Maria Gomez;88000.00;C;01\n"
+                "NOMINA;111005;1020304050;Maria Gomez;2432333.33;C;01",
+                language="csv"
+            )
+            st.write("**Uso:** Carga directa en SIIGO → Importar")
+
+        with tab_xlsx:
+            st.write("**Archivo Excel con 4 hojas:**")
+            st.markdown("""
+            1. **Plano SIIGO** - Asientos en formato tabular
+            2. **Resumen** - Balance contable (Débitos = Créditos)
+            3. **Por Cuenta** - Agrupado por cuenta contable
+            4. **Instrucciones** - Pasos para cargar en SIIGO
+            """)
+            st.write("**Uso:** Revisar antes de cargar en SIIGO")
+
+        st.write("### 📋 Estructura de Campos")
         st.markdown("""
         1. **TIPO** - Tipo de movimiento (NOMINA)
         2. **CUENTA** - Cuenta contable
            - 5105: Salarios
            - 510530: Cesantías
+           - 510533: Intereses Cesantías
            - 510536: Prima
            - 510539: Vacaciones
            - 237005: Salud
            - 238030: Pensión
-           - 111005: Bancos
+           - 238095: Fondo Solidaridad
+           - 236540: Retención en la Fuente
+           - 111005: Bancos (Neto)
         3. **DOCUMENTO** - Cédula del empleado
         4. **NOMBRE** - Nombre del empleado
         5. **VALOR** - Valor del movimiento
-        6. **DEBITO/CREDITO** - D (Débito) o C (Crédito)
+        6. **DEBITO_CREDITO** - D (Débito) o C (Crédito)
         7. **CENTRO_COSTOS** - Centro de costos (01)
+        8. **CONCEPTO** - Descripción del movimiento
         """)
 
         st.divider()

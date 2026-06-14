@@ -438,6 +438,245 @@ async def generar_plano_siigo(file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
+@router.post("/exportar-plano-siigo-excel")
+async def exportar_plano_siigo_excel(file: UploadFile = File(...)):
+    """
+    Genera archivo Excel con el plano SIIGO
+    """
+    try:
+        from ..utils import calcular_liquidacion
+
+        excel_file = await file.read()
+        excel_bytes = BytesIO(excel_file)
+
+        # Cargar empleados
+        df_empleados = pd.read_excel(excel_bytes, sheet_name='Empleados', dtype={'documento': str})
+
+        # Cargar parámetros si existen
+        df_parametros = None
+        try:
+            excel_bytes.seek(0)
+            df_parametros = pd.read_excel(excel_bytes, sheet_name='Parametros')
+        except:
+            pass
+
+        # Cargar novedades si existen
+        df_novedades = None
+        try:
+            excel_bytes.seek(0)
+            df_novedades = pd.read_excel(excel_bytes, sheet_name='Novedades', dtype={'documento': str})
+        except:
+            pass
+
+        # Calcular liquidación completa
+        resultados = calcular_liquidacion(df_empleados, df_parametros, df_novedades)
+
+        if not resultados:
+            return {"error": "No se pudo procesar ningún empleado"}
+
+        # Generar asientos contables
+        asientos = []
+
+        cuentas = {
+            'salarios': '5105',
+            'cesantias': '510530',
+            'intereses_cesantias': '510533',
+            'prima': '510536',
+            'vacaciones': '510539',
+            'salud': '237005',
+            'pension': '238030',
+            'fondo_solidaridad': '238095',
+            'retencion_fuente': '236540',
+            'bancos': '111005',
+        }
+
+        centro_costos = '01'
+
+        for emp in resultados:
+            documento = emp['documento']
+            nombre = emp['nombre']
+
+            # DEVENGOS (Débito)
+            if emp.get('salario_prorr', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['salarios'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['salario_prorr'], 2),
+                    'DEBITO_CREDITO': 'D',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'SALARIO'
+                })
+
+            if emp.get('cesantias', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['cesantias'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['cesantias'], 2),
+                    'DEBITO_CREDITO': 'D',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'CESANTIAS'
+                })
+
+            if emp.get('intereses_cesantias', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['intereses_cesantias'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['intereses_cesantias'], 2),
+                    'DEBITO_CREDITO': 'D',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'INTERESES CESANTIAS'
+                })
+
+            if emp.get('prima', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['prima'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['prima'], 2),
+                    'DEBITO_CREDITO': 'D',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'PRIMA SERVICIOS'
+                })
+
+            if emp.get('vacaciones', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['vacaciones'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['vacaciones'], 2),
+                    'DEBITO_CREDITO': 'D',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'VACACIONES'
+                })
+
+            # DEDUCCIONES (Crédito)
+            if emp.get('salud', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['salud'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['salud'], 2),
+                    'DEBITO_CREDITO': 'C',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'APORTE SALUD'
+                })
+
+            if emp.get('pension', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['pension'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['pension'], 2),
+                    'DEBITO_CREDITO': 'C',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'APORTE PENSION'
+                })
+
+            if emp.get('fondo_solidaridad', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['fondo_solidaridad'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['fondo_solidaridad'], 2),
+                    'DEBITO_CREDITO': 'C',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'FONDO SOLIDARIDAD'
+                })
+
+            if emp.get('retencion', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['retencion_fuente'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['retencion'], 2),
+                    'DEBITO_CREDITO': 'C',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'RETENCION FUENTE'
+                })
+
+            # NETO A PAGAR
+            if emp.get('neto_pagar', 0) > 0:
+                asientos.append({
+                    'TIPO': 'NOMINA',
+                    'CUENTA': cuentas['bancos'],
+                    'DOCUMENTO': documento,
+                    'NOMBRE': nombre,
+                    'VALOR': round(emp['neto_pagar'], 2),
+                    'DEBITO_CREDITO': 'C',
+                    'CENTRO_COSTOS': centro_costos,
+                    'CONCEPTO': 'NETO A PAGAR'
+                })
+
+        # Crear DataFrame
+        df_asientos = pd.DataFrame(asientos)
+
+        # Calcular balance
+        debitos = df_asientos[df_asientos['DEBITO_CREDITO'] == 'D']['VALOR'].sum()
+        creditos = df_asientos[df_asientos['DEBITO_CREDITO'] == 'C']['VALOR'].sum()
+
+        # Exportar a Excel con múltiples hojas
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Hoja 1: Asientos
+            df_asientos.to_excel(writer, sheet_name='Plano SIIGO', index=False)
+
+            # Hoja 2: Resumen
+            resumen = pd.DataFrame({
+                'CONCEPTO': ['Total Débitos', 'Total Créditos', 'Diferencia', 'ESTADO'],
+                'VALOR': [debitos, creditos, abs(debitos - creditos), 'BALANCEADO' if abs(debitos - creditos) < 0.01 else 'DESBALANCEADO']
+            })
+            resumen.to_excel(writer, sheet_name='Resumen', index=False)
+
+            # Hoja 3: Por Cuenta
+            por_cuenta = df_asientos.groupby('CUENTA')['VALOR'].sum().reset_index()
+            por_cuenta.columns = ['CUENTA', 'TOTAL']
+            por_cuenta = por_cuenta.sort_values('TOTAL', ascending=False)
+            por_cuenta.to_excel(writer, sheet_name='Por Cuenta', index=False)
+
+            # Hoja 4: Instrucciones
+            instrucciones = pd.DataFrame({
+                'INSTRUCCIONES PARA CARGAR EN SIIGO': [
+                    '1. Abre SIIGO',
+                    '2. Ve a: Contabilidad → Comprobantes → Importar',
+                    '3. Selecciona la hoja "Plano SIIGO"',
+                    '4. Los campos son:',
+                    '   - TIPO: Tipo de movimiento (NOMINA)',
+                    '   - CUENTA: Número de cuenta contable',
+                    '   - DOCUMENTO: Cédula del empleado',
+                    '   - NOMBRE: Nombre del empleado',
+                    '   - VALOR: Valor del movimiento',
+                    '   - DEBITO_CREDITO: D (Débito) o C (Crédito)',
+                    '   - CENTRO_COSTOS: Centro de costos',
+                    '5. Valida los asientos',
+                    '6. Graba el comprobante'
+                ]
+            })
+            instrucciones.to_excel(writer, sheet_name='Instrucciones', index=False, header=False)
+
+        output.seek(0)
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=plano_siigo.xlsx"}
+        )
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.post("/exportar-pdf-prima-zip")
 async def exportar_pdf_prima_zip(file: UploadFile = File(...)):
     """
