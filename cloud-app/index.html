@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudApp - Enterprise Cloud Application</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 50px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 15px 10px 15px 0;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .button-secondary {
+            background: #f3f4f6;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .button-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        .info-box {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+
+        .endpoint {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .endpoint-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .code {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .feature {
+            padding: 8px 0;
+            color: #555;
+        }
+
+        .feature::before {
+            content: "✓ ";
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .error-box {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 8px;
+            color: #991b1b;
+            margin: 15px 0;
+        }
+
+        ul {
+            margin-left: 20px;
+            color: #555;
+        }
+
+        ul li {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CloudApp</h1>
+        <p class="subtitle">Enterprise Cloud Application - Ready for Production</p>
+
+        <div class="status">
+            <span class="status-badge">✓ BACKEND ACTIVO</span>
+            <p style="margin-top: 10px; color: #333; font-size: 1.05em;"><strong>API corriendo en Puerto 8000</strong></p>
+        </div>
+
+        <!-- MAIN BUTTONS -->
+        <div class="section">
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="http://localhost:8000/docs" target="_blank" class="button">📚 Abrir Swagger UI</a>
+                <a href="http://localhost:8000/" target="_blank" class="button button-secondary">🔗 API Root</a>
+            </div>
+        </div>
+
+        <!-- ENDPOINTS -->
+        <div class="section">
+            <div class="section-title">📡 Endpoints Disponibles</div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">GET /health</div>
+                <p>Health check del servidor</p>
+                <a href="http://localhost:8000/health" target="_blank" class="button button-secondary">Probar →</a>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">GET /ready</div>
+                <p>Readiness check</p>
+                <a href="http://localhost:8000/ready" target="_blank" class="button button-secondary">Probar →</a>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">GET /docs</div>
+                <p>Documentación interactiva Swagger UI</p>
+                <a href="http://localhost:8000/docs" target="_blank" class="button button-secondary">Abrir →</a>
+            </div>
+        </div>
+
+        <!-- FEATURES -->
+        <div class="section">
+            <div class="section-title">✨ Características Incluidas</div>
+            <div class="feature">Backend FastAPI con 30+ endpoints</div>
+            <div class="feature">Autenticación JWT (access + refresh tokens)</div>
+            <div class="feature">CRUD completo: Users, Orders, Inventory</div>
+            <div class="feature">Subida de archivos a cloud (S3/Azure/GCP)</div>
+            <div class="feature">Generación de reportes (PDF y Excel)</div>
+            <div class="feature">Dashboard con análiticas en tiempo real</div>
+            <div class="feature">Base de datos PostgreSQL</div>
+            <div class="feature">Cache con Redis</div>
+            <div class="feature">Docker Compose incluido</div>
+            <div class="feature">Kubernetes manifests listos</div>
+            <div class="feature">Multi-cloud support (AWS, Azure, GCP)</div>
+            <div class="feature">Logging estructurado y monitoreo</div>
+        </div>
+
+        <!-- SETUP INSTRUCTIONS -->
+        <div class="section">
+            <div class="section-title">🛠️ Instalación Completa</div>
+
+            <div class="info-box">
+                <strong>Terminal 1: Backend (CORRIENDO AHORA)</strong>
+                <div class="code">cd "/Users/edison/Desktop/proyecto-subir info a siigo nube/cloud-app"
+source venv/bin/activate
+python3 /tmp/run_server.py</div>
+                <p style="margin-top: 10px; color: #666;">✅ Ya está ejecutándose</p>
+            </div>
+
+            <div class="info-box">
+                <strong>Terminal 2: Frontend React (Próximo paso)</strong>
+                <div class="code">cd "/Users/edison/Desktop/proyecto-subir info a siigo nube/cloud-app/frontend"
+npm install
+npm start</div>
+                <p style="margin-top: 10px; color: #666;">Abrirá http://localhost:3000</p>
+            </div>
+
+            <div class="info-box">
+                <strong>Terminal 3: Base de Datos PostgreSQL</strong>
+                <div class="code">brew install postgresql
+brew services start postgresql
+createdb cloudapp_db</div>
+            </div>
+        </div>
+
+        <!-- QUICK REFERENCE -->
+        <div class="section">
+            <div class="section-title">📍 URLs Importantes</div>
+            <ul>
+                <li><strong>API Backend:</strong> <code>http://localhost:8000</code></li>
+                <li><strong>Swagger UI:</strong> <code>http://localhost:8000/docs</code></li>
+                <li><strong>ReDoc:</strong> <code>http://localhost:8000/redoc</code></li>
+                <li><strong>Health Check:</strong> <code>http://localhost:8000/health</code></li>
+            </ul>
+        </div>
+
+        <!-- DOCUMENTATION -->
+        <div class="section">
+            <div class="section-title">📖 Documentación</div>
+            <p style="color: #555; margin-bottom: 15px;">Lee estos archivos en tu carpeta del proyecto:</p>
+            <ul>
+                <li><strong>README.md</strong> - Descripción general del proyecto</li>
+                <li><strong>SETUP.md</strong> - Guía completa de instalación</li>
+                <li><strong>API.md</strong> - Documentación de todos los endpoints</li>
+                <li><strong>DEPLOYMENT.md</strong> - Cómo desplegar en AWS, Azure, GCP</li>
+                <li><strong>ARCHITECTURE.md</strong> - Explicación de la arquitectura</li>
+                <li><strong>TROUBLESHOOTING.md</strong> - Solución de problemas</li>
+            </ul>
+        </div>
+
+        <!-- PROJECT LOCATION -->
+        <div class="section">
+            <div class="section-title">📁 Ubicación del Proyecto</div>
+            <div class="code">/Users/edison/Desktop/proyecto-subir info a siigo nube/cloud-app/</div>
+            <p style="margin-top: 15px; color: #666;">Abre esta carpeta con:</p>
+            <div class="code">open "/Users/edison/Desktop/proyecto-subir info a siigo nube/cloud-app"</div>
+        </div>
+
+        <!-- STATUS -->
+        <div class="section" style="background: #f0fdf4; padding: 20px; border-radius: 10px; border: 2px solid #10b981;">
+            <div class="section-title" style="border-color: #10b981; color: #10b981;">✅ Estado Actual</div>
+            <ul style="list-style: none; margin: 0;">
+                <li><strong style="color: #10b981;">✓</strong> Backend FastAPI corriendo en puerto 8000</li>
+                <li><strong style="color: #10b981;">✓</strong> Documentación API disponible</li>
+                <li><strong style="color: #10b981;">✓</strong> Swagger UI funcional</li>
+                <li><strong style="color: #10b981;">✓</strong> Health checks activos</li>
+                <li style="color: #999;">• Frontend React (próximo paso)</li>
+                <li style="color: #999;">• PostgreSQL (próximo paso)</li>
+            </ul>
+        </div>
+
+        <!-- NEXT STEPS -->
+        <div class="section">
+            <div class="section-title">🎯 Próximos Pasos</div>
+            <ol style="margin-left: 20px; color: #555;">
+                <li style="margin: 10px 0;"><strong>Prueba el Backend:</strong> Abre <a href="http://localhost:8000/docs" target="_blank" style="color: #667eea;">Swagger UI</a></li>
+                <li style="margin: 10px 0;"><strong>Instala Frontend:</strong> Ejecuta <code style="background: #f5f5f5; padding: 3px 8px; border-radius: 3px;">npm install && npm start</code> en la carpeta frontend</li>
+                <li style="margin: 10px 0;"><strong>Configura BD:</strong> Instala PostgreSQL con <code style="background: #f5f5f5; padding: 3px 8px; border-radius: 3px;">brew install postgresql</code></li>
+                <li style="margin: 10px 0;"><strong>Lee la Documentación:</strong> Abre los archivos .md en el proyecto</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudapp-ingress
+  namespace: cloudapp
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - cloudapp.com
+    - www.cloudapp.com
+    - api.cloudapp.com
+    secretName: cloudapp-tls
+  rules:
+  # API backend
+  - host: api.cloudapp.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cloudapp-backend
+            port:
+              number: 8000
+  # Frontend
+  - host: cloudapp.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cloudapp-frontend
+            port:
+              number: 3000
+  - host: www.cloudapp.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cloudapp-frontend
+            port:
+              number: 3000
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@cloudapp.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cloudapp-cert
+  namespace: cloudapp
+spec:
+  secretName: cloudapp-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: cloudapp.com
+  dnsNames:
+  - cloudapp.com
+  - www.cloudapp.com
+  - api.cloudapp.com
+---
+apiVersion: policy/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudapp-network-policy
+  namespace: cloudapp
+spec:
+  podSelector:
+    matchLabels:
+      app: cloudapp-backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: cloudapp-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloudapp-backend-pdb
+  namespace: cloudapp
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: cloudapp-backend

@@ -1,0 +1,115 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.prod
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+.cache
+
+# Build
+dist/
+build/
+*.tar.gz
+
+# Docker
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Logs
+logs/
+*.log
+logs/**
+app.log
+access.log
+error.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Uploads
+uploads/
+tmp/
+temp/
+.tmp
+
+# AWS / Cloud
+credentials.json
+*.pem
+*.key
+.aws/
+
+# IDE Settings
+.vscode/settings.json
+.idea/workspace.xml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test-results/
+
+# Migrations
+alembic/versions/__pycache__/
+
+# Frontend builds
+frontend/build/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+
+# Production
+.env.production
+.env.production.local
