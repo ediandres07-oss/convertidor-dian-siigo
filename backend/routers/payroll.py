@@ -243,14 +243,14 @@ async def pdf_zip(file: UploadFile = File(...)):
 @router.post("/generar-plano-siigo")
 async def generar_plano_siigo(file: UploadFile = File(...)):
     """
-    Genera archivo plano compatible con SIIGO usando generador corregido
+    Genera archivo plano SIIGO con mapeo exacto del modelo oficial de 27 columnas
     """
     try:
-        # CAMBIO: Importar generador corregido
+        # CAMBIO: Importar mapeo SIIGO
         import sys
         import os
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        from generador_plano_siigo import SiigoConfig, construir_plano_siigo, validar_plano_siigo
+        from mapeo_nomina_a_siigo import convertir_nomina_a_siigo, exportar_a_siigo_txt
         import io as io_module
         from datetime import datetime
 
@@ -283,304 +283,31 @@ async def generar_plano_siigo(file: UploadFile = File(...)):
         if not resultados:
             return {"error": "No se pudo procesar ningún empleado"}
 
-        # CAMBIO: Generar datos en formato de modelo SIIGO
-        movimientos_data = []
-
-        cuentas = {
-            'salarios': '5105',
-            'cesantias': '510530',
-            'intereses_cesantias': '510533',
-            'prima': '510536',
-            'vacaciones': '510539',
-            'salud': '237005',
-            'pension': '238030',
-            'fondo_solidaridad': '238095',
-            'retencion_fuente': '236540',
-            'bancos': '111005',
-        }
-
+        # CAMBIO: Usar mapeo para convertir a formato SIIGO exacto
         fecha_hoy = datetime.now().strftime("%d/%m/%Y")
-
-        for emp in resultados:
-            documento = emp['documento']
-            nombre = emp['nombre']
-            consecutivo = f"NOM-{documento}"
-
-            # DEVENGOS (Débito)
-            if emp.get('salario_prorr', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['salarios'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Salario - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": round(emp['salario_prorr'], 2),
-                    "Crédito": "",
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            if emp.get('cesantias', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['cesantias'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Cesantías - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": round(emp['cesantias'], 2),
-                    "Crédito": "",
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            if emp.get('prima', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['prima'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Prima - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": round(emp['prima'], 2),
-                    "Crédito": "",
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            if emp.get('vacaciones', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['vacaciones'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Vacaciones - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": round(emp['vacaciones'], 2),
-                    "Crédito": "",
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            # DEDUCCIONES (Crédito)
-            if emp.get('salud', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['salud'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Salud - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": "",
-                    "Crédito": round(emp['salud'], 2),
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            if emp.get('pension', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['pension'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Pensión - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": "",
-                    "Crédito": round(emp['pension'], 2),
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            if emp.get('retencion', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['retencion_fuente'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Retención - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": "",
-                    "Crédito": round(emp['retencion'], 2),
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-            # NETO A PAGAR
-            if emp.get('neto_pagar', 0) > 0:
-                movimientos_data.append({
-                    "Tipo de comprobante": "FC",
-                    "Consecutivo comprobante": consecutivo,
-                    "Fecha de elaboración": fecha_hoy,
-                    "Sigla moneda": "COP",
-                    "Tasa de cambio": "",
-                    "Código cuenta contable": cuentas['bancos'],
-                    "Identificación tercero": documento,
-                    "Sucursal": "",
-                    "Código producto": "",
-                    "Código de bodega": "",
-                    "Acción": "",
-                    "Cantidad producto": "",
-                    "Prefijo": "",
-                    "Consecutivo": "",
-                    "No. cuota": "",
-                    "Fecha vencimiento": "",
-                    "Código impuesto": "",
-                    "Código grupo activo fijo": "",
-                    "Código activo fijo": "",
-                    "Descripción": f"Neto a Pagar - {nombre}",
-                    "Código centro/subcentro de costos": "1-1",
-                    "Débito": "",
-                    "Crédito": round(emp['neto_pagar'], 2),
-                    "Observaciones": "Nómina",
-                    "Base gravable libro compras/ventas": "",
-                    "Base exenta libro compras/ventas": "",
-                    "Mes de cierre": "NO",
-                })
-
-        # CAMBIO: Usar generador corregido
-        df_movimientos = pd.DataFrame(movimientos_data)
-        config = SiigoConfig(
-            moneda_local="COP",
-            cuentas_vencimiento=set(),
-            cuentas_inventario=set(),
-            cuentas_impuesto=set(),
-            cuentas_activo_fijo=set(),
-        )
-
-        plano = construir_plano_siigo(df_movimientos, config=config)
-        plano_validado, errores = validar_plano_siigo(plano, config=config)
+        df_siigo = convertir_nomina_a_siigo(resultados, fecha_comprobante=fecha_hoy)
 
         # Generar archivo plano TXT
         plano_content = io_module.StringIO()
-        for idx, row in plano_validado.iterrows():
-            linea = (
-                f"{row['Tipo de comprobante']};"
-                f"{row['Código cuenta contable']};"
-                f"{row['Identificación tercero']};"
-                f"{row['Descripción']};"
-                f"{row['Débito'] if row['Débito'] else row['Crédito']};"
-                f"{'D' if row['Débito'] else 'C'}\n"
-            )
+        for idx, row in df_siigo.iterrows():
+            # Obtener valores
+            tipo = row['Tipo de comprobante']
+            cuenta = row['Código cuenta contable']
+            documento = row['Identificación tercero']
+            descripcion = row['Descripción']
+            debito = row['Débito']
+            credito = row['Crédito']
+
+            # Determinar valor y naturaleza
+            if debito and str(debito).strip():
+                valor = debito
+                naturaleza = 'D'
+            else:
+                valor = credito
+                naturaleza = 'C'
+
+            # Escribir línea en formato SIIGO
+            linea = f"{tipo};{cuenta};{documento};{descripcion};{valor};{naturaleza}\n"
             plano_content.write(linea)
 
         plano_bytes = plano_content.getvalue().encode('utf-8')
