@@ -639,17 +639,17 @@ with tab9:
                         columnas_faltantes.append(f"días ({', '.join(columnas_dias)})")
 
                     # CAMBIO: Mostrar advertencia pero permitir continuar con 30 días por defecto
-                    if not tiene_dias and (not tiene_fecha_inicio and not tiene_fecha_fin):
+                    if not tiene_dias and (not tiene_fecha_inicio or not tiene_fecha_fin):
                         st.warning(
-                            "⚠️ **No se encontró columna de días**\n\n"
+                            "⚠️ **No se encontró columna de días ni fechas completas**\n\n"
                             "El sistema usará **30 días por defecto** (un mes estándar) para cada empleado.\n\n"
-                            "Si necesitas valores diferentes:\n"
-                            "• Opción 1: Agrega columna `dias_laborados` (o `dias`, `dias_trabajados`, etc.)\n"
-                            "• Opción 2: Agrega columnas `fecha_inicio` y `fecha_fin`"
+                            "Para cálculo automático, elige una opción:\n"
+                            "• **Opción 1:** Agrega columna `dias_laborados` (o `dias`, `dias_trabajados`, etc.)\n"
+                            "• **Opción 2:** Agrega AMBAS columnas `fecha_entrada` y `fecha_retiro`\n\n"
+                            "**Columnas detectadas en tu archivo:**"
                         )
 
                         st.divider()
-                        st.write("### 📋 Columnas disponibles en tu archivo:")
                         for col in df_empleados.columns:
                             st.write(f"• `{col}`")
                     else:
