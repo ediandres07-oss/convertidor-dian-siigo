@@ -632,29 +632,20 @@ with tab9:
                     if not tiene_dias:
                         columnas_faltantes.append(f"días ({', '.join(columnas_dias)})")
 
-                    if columnas_faltantes:
-                        st.error(f"❌ Columnas faltantes:\n\n" + "\n".join(f"• {col}" for col in columnas_faltantes))
+                    # CAMBIO: Mostrar advertencia pero permitir continuar con 30 días por defecto
+                    if not tiene_dias and (not tiene_fecha_inicio and not tiene_fecha_fin):
+                        st.warning(
+                            "⚠️ **No se encontró columna de días**\n\n"
+                            "El sistema usará **30 días por defecto** (un mes estándar) para cada empleado.\n\n"
+                            "Si necesitas valores diferentes:\n"
+                            "• Opción 1: Agrega columna `dias_laborados` (o `dias`, `dias_trabajados`, etc.)\n"
+                            "• Opción 2: Agrega columnas `fecha_inicio` y `fecha_fin`"
+                        )
 
                         st.divider()
                         st.write("### 📋 Columnas disponibles en tu archivo:")
                         for col in df_empleados.columns:
                             st.write(f"• `{col}`")
-
-                        st.divider()
-                        st.write("### 💡 Soluciones:")
-                        st.markdown("""
-                        1. **Opción 1**: Renombra tu columna de días a uno de estos nombres:
-                           - `dias`, `dias_laborados`, `dias_trabajados`, `dias_trabajo`, `days`
-
-                        2. **Opción 2**: Si no tienes días en el archivo:
-                           - Calcula días como: (fecha_fin - fecha_inicio).days
-                           - O usa 30 días por defecto (un mes)
-
-                        3. **Opción 3**: Carga un archivo con la estructura requerida:
-                           ```
-                           documento | nombre | salario_mensual | dias_laborados
-                           ```
-                        """)
                     else:
                         # Calcular prestaciones
                         df_prestaciones = calcular_prestaciones(df_empleados)

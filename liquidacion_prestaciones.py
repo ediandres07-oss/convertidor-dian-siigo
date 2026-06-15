@@ -52,32 +52,31 @@ def calcular_prestaciones(empleados_df):
     if not col_salario:
         raise ValueError("No se encontró columna de salario (esperado: salario_mensual, salario, sueldo)")
 
-    # Si no hay días, intentar calcular desde fechas
+    # CAMBIO: Si no hay días, intentar calcular desde fechas o usar 30 por defecto
+    usar_default = False
     if not col_dias and not (col_fecha_inicio and col_fecha_fin):
-        raise ValueError(
-            "No se encontró columna de días ni fechas para calcularlos.\n\n"
-            "Opciones válidas:\n"
-            "• Días: dias_laborados, dias, dias_trabajados, dias_trabajo, days\n"
-            "• Fechas inicio: fecha_inicio, fecha_ingreso, start_date\n"
-            "• Fechas fin: fecha_fin, fecha_salida, end_date"
-        )
+        # Usar 30 días como default (un mes estándar)
+        usar_default = True
 
     for idx, emp in empleados_df.iterrows():
         documento = str(emp.get(col_doc, '')).strip()
         nombre = str(emp.get(col_nombre, '')).strip()
         salario = float(emp.get(col_salario, 0) or 0)
 
-        # CAMBIO: Calcular días desde columna o desde fechas
+        # CAMBIO: Calcular días desde columna, fechas o usar 30 como default
         if col_dias:
             dias = float(emp.get(col_dias, 0) or 0)
-        else:
+        elif col_fecha_inicio and col_fecha_fin:
             # Calcular desde fechas
             try:
                 fecha_inicio = pd.to_datetime(emp.get(col_fecha_inicio))
                 fecha_fin = pd.to_datetime(emp.get(col_fecha_fin))
                 dias = (fecha_fin - fecha_inicio).days
             except Exception as e:
-                raise ValueError(f"Error calculando días desde fechas para {nombre}: {str(e)}")
+                dias = 30  # Usar default si hay error en fechas
+        else:
+            # CAMBIO: Usar 30 días por defecto (un mes)
+            dias = 30
 
         # ============================================
         # CESANTÍAS
