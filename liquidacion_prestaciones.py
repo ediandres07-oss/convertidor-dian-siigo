@@ -20,6 +20,7 @@ def calcular_prestaciones(empleados_df):
     Args:
         empleados_df: DataFrame con columnas: documento, nombre, salario_mensual, dias_laborados
                      (También acepta variaciones como 'dias', 'dias_trabajados', etc.)
+                     Si no tiene días, intenta calcular desde fechas de inicio/fin
 
     Returns:
         DataFrame con cálculo de prestaciones
@@ -32,28 +33,51 @@ def calcular_prestaciones(empleados_df):
     columnas_nombre = ['nombre', 'name', 'empleado']
     columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
     columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
+    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo']
+    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino']
 
     # Obtener nombres de columnas reales
     col_doc = next((col for col in columnas_documento if col in empleados_df.columns), None)
     col_nombre = next((col for col in columnas_nombre if col in empleados_df.columns), None)
     col_salario = next((col for col in columnas_salario if col in empleados_df.columns), None)
     col_dias = next((col for col in columnas_dias if col in empleados_df.columns), None)
+    col_fecha_inicio = next((col for col in columnas_fecha_inicio if col in empleados_df.columns), None)
+    col_fecha_fin = next((col for col in columnas_fecha_fin if col in empleados_df.columns), None)
 
-    # Validar que todas las columnas existan
+    # Validar que todas las columnas esenciales existan
     if not col_doc:
         raise ValueError("No se encontró columna de documento (esperado: documento, doc, cedula, id)")
     if not col_nombre:
         raise ValueError("No se encontró columna de nombre (esperado: nombre, name, empleado)")
     if not col_salario:
         raise ValueError("No se encontró columna de salario (esperado: salario_mensual, salario, sueldo)")
-    if not col_dias:
-        raise ValueError("No se encontró columna de días (esperado: dias_laborados, dias, dias_trabajados)")
+
+    # Si no hay días, intentar calcular desde fechas
+    if not col_dias and not (col_fecha_inicio and col_fecha_fin):
+        raise ValueError(
+            "No se encontró columna de días ni fechas para calcularlos.\n\n"
+            "Opciones válidas:\n"
+            "• Días: dias_laborados, dias, dias_trabajados, dias_trabajo, days\n"
+            "• Fechas inicio: fecha_inicio, fecha_ingreso, start_date\n"
+            "• Fechas fin: fecha_fin, fecha_salida, end_date"
+        )
 
     for idx, emp in empleados_df.iterrows():
         documento = str(emp.get(col_doc, '')).strip()
         nombre = str(emp.get(col_nombre, '')).strip()
         salario = float(emp.get(col_salario, 0) or 0)
-        dias = float(emp.get(col_dias, 0) or 0)
+
+        # CAMBIO: Calcular días desde columna o desde fechas
+        if col_dias:
+            dias = float(emp.get(col_dias, 0) or 0)
+        else:
+            # Calcular desde fechas
+            try:
+                fecha_inicio = pd.to_datetime(emp.get(col_fecha_inicio))
+                fecha_fin = pd.to_datetime(emp.get(col_fecha_fin))
+                dias = (fecha_fin - fecha_inicio).days
+            except Exception as e:
+                raise ValueError(f"Error calculando días desde fechas para {nombre}: {str(e)}")
 
         # ============================================
         # CESANTÍAS

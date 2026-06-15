@@ -634,6 +634,27 @@ with tab9:
 
                     if columnas_faltantes:
                         st.error(f"❌ Columnas faltantes:\n\n" + "\n".join(f"• {col}" for col in columnas_faltantes))
+
+                        st.divider()
+                        st.write("### 📋 Columnas disponibles en tu archivo:")
+                        for col in df_empleados.columns:
+                            st.write(f"• `{col}`")
+
+                        st.divider()
+                        st.write("### 💡 Soluciones:")
+                        st.markdown("""
+                        1. **Opción 1**: Renombra tu columna de días a uno de estos nombres:
+                           - `dias`, `dias_laborados`, `dias_trabajados`, `dias_trabajo`, `days`
+
+                        2. **Opción 2**: Si no tienes días en el archivo:
+                           - Calcula días como: (fecha_fin - fecha_inicio).days
+                           - O usa 30 días por defecto (un mes)
+
+                        3. **Opción 3**: Carga un archivo con la estructura requerida:
+                           ```
+                           documento | nombre | salario_mensual | dias_laborados
+                           ```
+                        """)
                     else:
                         # Calcular prestaciones
                         df_prestaciones = calcular_prestaciones(df_empleados)
