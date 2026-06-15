@@ -33,8 +33,9 @@ def calcular_prestaciones(empleados_df):
     columnas_nombre = ['nombre', 'name', 'empleado']
     columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
     columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
-    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo']
-    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino']
+    # CAMBIO: Agregar más opciones para fechas de inicio y retiro
+    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo', 'fecha entrada', 'fecha_entrada']
+    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino', 'fecha retiro', 'fecha_retiro']
 
     # Obtener nombres de columnas reales
     col_doc = next((col for col in columnas_documento if col in empleados_df.columns), None)

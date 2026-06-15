@@ -616,9 +616,9 @@ with tab9:
                     columnas_nombre = ['nombre', 'name', 'empleado']
                     columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
                     columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
-                    # CAMBIO: Agregar columnas de fechas
-                    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo']
-                    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino']
+                    # CAMBIO: Agregar columnas de fechas (incluye fecha entrada/retiro)
+                    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo', 'fecha entrada', 'fecha_entrada']
+                    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino', 'fecha retiro', 'fecha_retiro']
 
                     tiene_doc = any(col in df_empleados.columns for col in columnas_documento)
                     tiene_nombre = any(col in df_empleados.columns for col in columnas_nombre)
