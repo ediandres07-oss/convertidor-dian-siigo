@@ -56,8 +56,8 @@ with st.sidebar:
     - **Novedades**: documento, tipo_novedad, valor
     """)
 
-# Crear 10 pestañas
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+# Crear 9 pestañas
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📤 Cargar",
     "📊 Completa",
     "💼 Prima",
@@ -66,7 +66,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "📈 Comparativa",
     "🧮 SIIGO",
     "🔄 Convertir TXT",
-    "📋 Comprobantes",
     "⚙️ Config"
 ])
 
@@ -594,156 +593,9 @@ with tab8:
         st.info("📂 Carga un archivo TXT para convertirlo a Excel")
 
 
-# ========== TAB 9: COMPROBANTES CONTABLES ==========
+# ========== TAB 9: CONFIGURACIÓN ==========
 with tab9:
-    st.subheader("📋 Importador de Comprobantes Contables")
-    st.write("Importa y procesa comprobantes contables según el modelo SIIGO")
-
-    # Upload comprobantes
-    uploaded_comprobantes = st.file_uploader(
-        "Selecciona archivo Excel de Comprobantes Contables",
-        type=["xlsx"],
-        key="comprobantes_uploader",
-        help="Debe tener la estructura del modelo de importación SIIGO"
-    )
-
-    if uploaded_comprobantes is not None:
-        st.success(f"✅ Archivo cargado: {uploaded_comprobantes.name}")
-
-        if st.button("🔍 Procesar Comprobantes", use_container_width=True, key="process_comprobantes"):
-            with st.spinner("Procesando comprobantes..."):
-                try:
-                    # Importar comprobantes
-                    import sys
-                    sys.path.insert(0, '/Users/edison/Desktop/proyecto-subir info a siigo nube')
-                    from comprobantes_contables import importar_comprobantes, validar_comprobantes, generar_resumen_comprobantes
-
-                    # Guardar archivo temporal
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
-                        tmp.write(uploaded_comprobantes.getvalue())
-                        tmp_path = tmp.name
-
-                    # Importar
-                    df_comprobantes, error = importar_comprobantes(tmp_path)
-
-                    if error:
-                        st.error(f"❌ Error: {error}")
-                    else:
-                        st.session_state.df_comprobantes = df_comprobantes
-
-                        # Validar
-                        validaciones = validar_comprobantes(df_comprobantes)
-
-                        # Mostrar validación
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Total Comprobantes", validaciones["total_comprobantes"])
-                        with col2:
-                            st.metric("Total Débitos", f"${validaciones['balance']['total_debitos']:,.0f}")
-                        with col3:
-                            st.metric("Total Créditos", f"${validaciones['balance']['total_creditos']:,.0f}")
-                        with col4:
-                            estado = "✅ Balanceado" if validaciones['balance']['balanceado'] else "❌ Desbalanceado"
-                            st.metric("Estado", estado)
-
-                        st.divider()
-
-                        # Errores y advertencias
-                        if validaciones["errores"]:
-                            st.error("**Errores encontrados:**")
-                            for error in validaciones["errores"]:
-                                st.write(error)
-
-                        if validaciones["advertencias"]:
-                            st.warning("**Advertencias:**")
-                            for adv in validaciones["advertencias"]:
-                                st.write(adv)
-
-                        if not validaciones["errores"]:
-                            st.success("✅ Validación completada sin errores críticos")
-
-                        st.divider()
-
-                        # Resumen
-                        st.write("### 📊 Resumen")
-                        resumen = generar_resumen_comprobantes(df_comprobantes)
-
-                        # Por tipo
-                        if resumen["por_tipo"]:
-                            st.write("**Por Tipo de Comprobante:**")
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.bar_chart(pd.DataFrame(list(resumen["por_tipo"].items()), columns=["Tipo", "Cantidad"]).set_index("Tipo"))
-
-                        # Por cuenta
-                        if resumen["por_cuenta"]:
-                            st.write("**Movimientos por Cuenta:**")
-                            df_cuenta = pd.DataFrame(resumen["por_cuenta"])
-                            st.dataframe(df_cuenta, use_container_width=True)
-
-                        st.divider()
-
-                        # Descargas
-                        st.write("### ⬇️ Descargar Reportes")
-                        col1, col2, col3 = st.columns(3)
-
-                        with col1:
-                            if st.button("📄 Excel Validado", use_container_width=True, key="download_excel_comprobantes"):
-                                from comprobantes_contables import generar_excel_comprobantes
-                                import os
-                                archivo_excel = generar_excel_comprobantes(df_comprobantes)
-                                with open(archivo_excel, 'rb') as f:
-                                    st.download_button(
-                                        label="⬇️ Descargar Excel",
-                                        data=f.read(),
-                                        file_name=os.path.basename(archivo_excel),
-                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                    )
-                                os.remove(archivo_excel)
-
-                        with col2:
-                            if st.button("🧮 Plano SIIGO", use_container_width=True, key="download_plano_comprobantes"):
-                                from comprobantes_contables import generar_plano_siigo_desde_comprobantes
-                                import os
-                                archivo_plano = generar_plano_siigo_desde_comprobantes(df_comprobantes)
-                                with open(archivo_plano, 'rb') as f:
-                                    st.download_button(
-                                        label="⬇️ Descargar TXT",
-                                        data=f.read(),
-                                        file_name=os.path.basename(archivo_plano),
-                                        mime="text/plain"
-                                    )
-                                os.remove(archivo_plano)
-
-                        with col3:
-                            if st.button("📋 Ver Datos", use_container_width=True, key="view_comprobantes"):
-                                st.write("**Comprobantes Importados:**")
-                                st.dataframe(df_comprobantes, use_container_width=True)
-
-                except Exception as e:
-                    st.error(f"Error al procesar: {str(e)}")
-                    import traceback
-                    st.write(traceback.format_exc())
-
-    else:
-        st.info("📂 Carga un archivo Excel con comprobantes contables")
-        st.markdown("""
-        ### Columnas Requeridas:
-        - Tipo de comprobante
-        - Consecutivo comprobante
-        - Fecha de elaboración
-        - Código cuenta contable
-        - Identificación tercero
-        - Débito / Crédito
-        - Descripción
-        - Y 20 columnas más del modelo SIIGO
-        """)
-
-
-# ========== TAB 10: CONFIGURACIÓN ==========
-with tab10:
-    st.subheader("⚙️ Configuración y Documentación")
+    st.subheader("⚙️ Configuración")
 
     # Estado del servidor
     st.write("### Estado del Servidor")
