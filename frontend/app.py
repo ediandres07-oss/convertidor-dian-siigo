@@ -616,11 +616,17 @@ with tab9:
                     columnas_nombre = ['nombre', 'name', 'empleado']
                     columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
                     columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
+                    # CAMBIO: Agregar columnas de fechas
+                    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo']
+                    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino']
 
                     tiene_doc = any(col in df_empleados.columns for col in columnas_documento)
                     tiene_nombre = any(col in df_empleados.columns for col in columnas_nombre)
                     tiene_salario = any(col in df_empleados.columns for col in columnas_salario)
                     tiene_dias = any(col in df_empleados.columns for col in columnas_dias)
+                    # CAMBIO: Verificar fechas
+                    tiene_fecha_inicio = any(col in df_empleados.columns for col in columnas_fecha_inicio)
+                    tiene_fecha_fin = any(col in df_empleados.columns for col in columnas_fecha_fin)
 
                     columnas_faltantes = []
                     if not tiene_doc:
