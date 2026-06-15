@@ -611,12 +611,29 @@ with tab9:
                     excel_file = st.session_state.uploaded_file
                     df_empleados = pd.read_excel(excel_file, sheet_name='Empleados', dtype={'documento': str})
 
-                    # Validar columnas necesarias
-                    columnas_requeridas = ['documento', 'nombre', 'salario_mensual', 'dias_laborados']
-                    columnas_faltantes = [col for col in columnas_requeridas if col not in df_empleados.columns]
+                    # CAMBIO: Validación flexible de columnas
+                    columnas_documento = ['documento', 'doc', 'cedula', 'id']
+                    columnas_nombre = ['nombre', 'name', 'empleado']
+                    columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
+                    columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
+
+                    tiene_doc = any(col in df_empleados.columns for col in columnas_documento)
+                    tiene_nombre = any(col in df_empleados.columns for col in columnas_nombre)
+                    tiene_salario = any(col in df_empleados.columns for col in columnas_salario)
+                    tiene_dias = any(col in df_empleados.columns for col in columnas_dias)
+
+                    columnas_faltantes = []
+                    if not tiene_doc:
+                        columnas_faltantes.append(f"documento ({', '.join(columnas_documento)})")
+                    if not tiene_nombre:
+                        columnas_faltantes.append(f"nombre ({', '.join(columnas_nombre)})")
+                    if not tiene_salario:
+                        columnas_faltantes.append(f"salario ({', '.join(columnas_salario)})")
+                    if not tiene_dias:
+                        columnas_faltantes.append(f"días ({', '.join(columnas_dias)})")
 
                     if columnas_faltantes:
-                        st.error(f"❌ Columnas faltantes: {', '.join(columnas_faltantes)}")
+                        st.error(f"❌ Columnas faltantes:\n\n" + "\n".join(f"• {col}" for col in columnas_faltantes))
                     else:
                         # Calcular prestaciones
                         df_prestaciones = calcular_prestaciones(df_empleados)

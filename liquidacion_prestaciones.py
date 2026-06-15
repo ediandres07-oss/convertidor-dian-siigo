@@ -19,6 +19,7 @@ def calcular_prestaciones(empleados_df):
 
     Args:
         empleados_df: DataFrame con columnas: documento, nombre, salario_mensual, dias_laborados
+                     (También acepta variaciones como 'dias', 'dias_trabajados', etc.)
 
     Returns:
         DataFrame con cálculo de prestaciones
@@ -26,11 +27,33 @@ def calcular_prestaciones(empleados_df):
 
     prestaciones = []
 
+    # CAMBIO: Mapeo flexible de nombres de columnas
+    columnas_documento = ['documento', 'doc', 'cedula', 'id']
+    columnas_nombre = ['nombre', 'name', 'empleado']
+    columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
+    columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
+
+    # Obtener nombres de columnas reales
+    col_doc = next((col for col in columnas_documento if col in empleados_df.columns), None)
+    col_nombre = next((col for col in columnas_nombre if col in empleados_df.columns), None)
+    col_salario = next((col for col in columnas_salario if col in empleados_df.columns), None)
+    col_dias = next((col for col in columnas_dias if col in empleados_df.columns), None)
+
+    # Validar que todas las columnas existan
+    if not col_doc:
+        raise ValueError("No se encontró columna de documento (esperado: documento, doc, cedula, id)")
+    if not col_nombre:
+        raise ValueError("No se encontró columna de nombre (esperado: nombre, name, empleado)")
+    if not col_salario:
+        raise ValueError("No se encontró columna de salario (esperado: salario_mensual, salario, sueldo)")
+    if not col_dias:
+        raise ValueError("No se encontró columna de días (esperado: dias_laborados, dias, dias_trabajados)")
+
     for idx, emp in empleados_df.iterrows():
-        documento = str(emp.get('documento', '')).strip()
-        nombre = str(emp.get('nombre', '')).strip()
-        salario = float(emp.get('salario_mensual', 0) or 0)
-        dias = float(emp.get('dias_laborados', 0) or 0)
+        documento = str(emp.get(col_doc, '')).strip()
+        nombre = str(emp.get(col_nombre, '')).strip()
+        salario = float(emp.get(col_salario, 0) or 0)
+        dias = float(emp.get(col_dias, 0) or 0)
 
         # ============================================
         # CESANTÍAS
