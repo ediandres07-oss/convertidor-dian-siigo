@@ -56,8 +56,8 @@ with st.sidebar:
     - **Novedades**: documento, tipo_novedad, valor
     """)
 
-# Crear 9 pestañas
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+# Crear 10 pestañas
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "📤 Cargar",
     "📊 Completa",
     "💼 Prima",
@@ -66,6 +66,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📈 Comparativa",
     "🧮 SIIGO",
     "🔄 Convertir TXT",
+    "🎓 Prestaciones",
     "⚙️ Config"
 ])
 
@@ -593,8 +594,120 @@ with tab8:
         st.info("📂 Carga un archivo TXT para convertirlo a Excel")
 
 
-# ========== TAB 9: CONFIGURACIÓN ==========
+# ========== TAB 9: LIQUIDACIÓN DE PRESTACIONES SOCIALES ==========
 with tab9:
+    st.subheader("🎓 Liquidación de Prestaciones Sociales")
+    st.write("Calcula cesantías, prima, vacaciones e intereses - Genera PDF")
+
+    if "uploaded_file" in st.session_state:
+        if st.button("🧮 Liquidar Prestaciones", use_container_width=True, key="calc_prestaciones"):
+            with st.spinner("Calculando prestaciones..."):
+                try:
+                    import sys
+                    sys.path.insert(0, '/Users/edison/Desktop/proyecto-subir info a siigo nube')
+                    from liquidacion_prestaciones import calcular_prestaciones, generar_pdf_prestaciones
+
+                    # Leer archivo
+                    excel_file = st.session_state.uploaded_file
+                    df_empleados = pd.read_excel(excel_file, sheet_name='Empleados', dtype={'documento': str})
+
+                    # Validar columnas necesarias
+                    columnas_requeridas = ['documento', 'nombre', 'salario_mensual', 'dias_laborados']
+                    columnas_faltantes = [col for col in columnas_requeridas if col not in df_empleados.columns]
+
+                    if columnas_faltantes:
+                        st.error(f"❌ Columnas faltantes: {', '.join(columnas_faltantes)}")
+                    else:
+                        # Calcular prestaciones
+                        df_prestaciones = calcular_prestaciones(df_empleados)
+                        st.session_state.prestaciones_data = df_prestaciones
+
+                        # Mostrar resumen
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            st.metric("👥 Empleados", len(df_prestaciones))
+                        with col2:
+                            total_cesantias = df_prestaciones['Cesantías'].sum()
+                            st.metric("🏦 Cesantías", f"${total_cesantias:,.0f}")
+                        with col3:
+                            total_intereses = df_prestaciones['Intereses Cesantías'].sum()
+                            st.metric("📈 Int. Cesantías", f"${total_intereses:,.0f}")
+                        with col4:
+                            total_prima = df_prestaciones['Prima de Servicios'].sum()
+                            st.metric("💼 Prima", f"${total_prima:,.0f}")
+                        with col5:
+                            total_vacaciones = df_prestaciones['Vacaciones'].sum()
+                            st.metric("🏖️ Vacaciones", f"${total_vacaciones:,.0f}")
+
+                        st.divider()
+
+                        # Total general
+                        total_prestaciones = df_prestaciones['Total Prestaciones'].sum()
+                        st.info(f"💰 **Total Prestaciones: ${total_prestaciones:,.2f}**")
+
+                        st.divider()
+
+                        # Tabla de detalles
+                        st.write("### Detalle por Empleado")
+                        df_display = df_prestaciones.copy()
+                        st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+                        st.divider()
+
+                        # Botón para descargar PDF
+                        st.write("### 📥 Descargar Reporte")
+                        if st.button("📄 Descargar PDF", use_container_width=True, key="download_pdf_prestaciones"):
+                            try:
+                                # Generar PDF
+                                pdf_bytes = generar_pdf_prestaciones(df_prestaciones)
+
+                                # Crear botón de descarga
+                                st.download_button(
+                                    label="⬇️ Descargar Prestaciones.pdf",
+                                    data=pdf_bytes,
+                                    file_name="prestaciones_sociales.pdf",
+                                    mime="application/pdf",
+                                    use_container_width=True
+                                )
+                            except Exception as e:
+                                st.error(f"❌ Error generando PDF: {str(e)}")
+
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    import traceback
+                    st.write(traceback.format_exc())
+
+        # Mostrar datos si ya existen
+        if "prestaciones_data" in st.session_state:
+            df_prestaciones = st.session_state.prestaciones_data
+
+            col1, col2, col3, col4, col5 = st.columns(5)
+            with col1:
+                st.metric("👥 Empleados", len(df_prestaciones))
+            with col2:
+                total_cesantias = df_prestaciones['Cesantías'].sum()
+                st.metric("🏦 Cesantías", f"${total_cesantias:,.0f}")
+            with col3:
+                total_intereses = df_prestaciones['Intereses Cesantías'].sum()
+                st.metric("📈 Int. Cesantías", f"${total_intereses:,.0f}")
+            with col4:
+                total_prima = df_prestaciones['Prima de Servicios'].sum()
+                st.metric("💼 Prima", f"${total_prima:,.0f}")
+            with col5:
+                total_vacaciones = df_prestaciones['Vacaciones'].sum()
+                st.metric("🏖️ Vacaciones", f"${total_vacaciones:,.0f}")
+
+            st.divider()
+
+            total_prestaciones = df_prestaciones['Total Prestaciones'].sum()
+            st.info(f"💰 **Total Prestaciones: ${total_prestaciones:,.2f}**")
+
+    else:
+        st.info("📤 Carga un archivo para calcular prestaciones sociales")
+
+
+# ========== TAB 10: CONFIGURACIÓN ==========
+with tab10:
     st.subheader("⚙️ Configuración")
 
     # Estado del servidor
