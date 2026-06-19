@@ -185,8 +185,51 @@ def make_row(tipo_comp, consec, fecha, cuenta, nit, cod_imp, descripcion, debito
 
 
 def _write_headers(ws):
+    """Escribe encabezados con estilos: fondo azul claro, texto oscuro, negrita."""
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+
+    header_fill = PatternFill(fill_type='solid', fgColor='D6EAF8')   # Azul claro
+    header_font = Font(bold=True, color='1a3a5c', name='Calibri', size=10)
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin', color='BFCCD8'),
+        right=Side(style='thin', color='BFCCD8'),
+        top=Side(style='thin', color='BFCCD8'),
+        bottom=Side(style='thin', color='BFCCD8')
+    )
+
     for col, header in enumerate(HEADERS, 1):
-        ws.cell(row=1, column=col, value=header)
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[1].height = 20
+
+
+def _apply_table_colors(ws, start_row=2, end_row=None):
+    """Aplica colores alternados a las filas de datos."""
+    from openpyxl.styles import PatternFill, Border, Side
+
+    if end_row is None:
+        end_row = ws.max_row
+
+    light_gray_fill = PatternFill(fill_type='solid', fgColor='F8F9FA')   # Gris muy claro
+    white_fill = PatternFill(fill_type='solid', fgColor='FFFFFF')
+    thin_border = Border(
+        left=Side(style='thin', color='E0E0E0'),
+        right=Side(style='thin', color='E0E0E0'),
+        top=Side(style='thin', color='E0E0E0'),
+        bottom=Side(style='thin', color='E0E0E0')
+    )
+
+    for row in range(start_row, end_row + 1):
+        fill = light_gray_fill if (row - start_row) % 2 == 0 else white_fill
+        for col in range(1, ws.max_column + 1):
+            cell = ws.cell(row=row, column=col)
+            cell.fill = fill
+            cell.border = thin_border
 
 
 # ========================================
@@ -388,6 +431,7 @@ def convert_compras(facturas, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec_inicio + len(facturas)
 
 
@@ -439,6 +483,7 @@ def convert_nc_compras(notas, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec_inicio + len(notas)
 
 
@@ -491,6 +536,7 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec_inicio + len(gastos)
 
 
@@ -636,6 +682,7 @@ def convert_nc_ventas(nc_ventas, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec_inicio + len(calc)
 
 
@@ -701,6 +748,7 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
         row_out += 1
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec_inicio + len(clientes)
 
 
@@ -955,6 +1003,7 @@ def convert_nomina(empleados_data, wb_dst, consec_inicio, fecha_nomina=None):
 
         consec += 1
 
+    _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
     return consec
 
 
