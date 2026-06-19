@@ -232,6 +232,37 @@ def _apply_table_colors(ws, start_row=2, end_row=None):
             cell.border = thin_border
 
 
+def _insert_table(ws, sheet_name, start_row=1, end_row=None):
+    """Inserta una tabla formateada en la hoja con filtros y estilos."""
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+
+    if end_row is None:
+        end_row = ws.max_row
+
+    if end_row < start_row:
+        return  # Sin datos para crear tabla
+
+    # Rango de la tabla: A1:Z{end_row} (ajusta el rango según las columnas usadas)
+    max_col = ws.max_column
+    end_col = get_column_letter(max_col)
+    ref = f"A{start_row}:{end_col}{end_row}"
+
+    # Crear tabla con nombre único
+    tab_name = f"Tabla{sheet_name.replace(' ', '')}"
+    tab = Table(displayName=tab_name, ref=ref)
+
+    # Estilo claro con líneas y filtros
+    style = TableStyleInfo(
+        name="TableStyleLight9",  # Estilo claro predefinido de Excel
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    tab.tableStyleInfo = style
+    ws.add_table(tab)
+
+
 # ========================================
 # LECTURA DE LA HOJA REPORTE
 # ========================================
@@ -432,6 +463,7 @@ def convert_compras(facturas, wb_dst, consec_inicio):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "COMPRAS")
     return consec_inicio + len(facturas)
 
 
@@ -484,6 +516,7 @@ def convert_nc_compras(notas, wb_dst, consec_inicio):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "NC COMPRAS")
     return consec_inicio + len(notas)
 
 
@@ -537,6 +570,7 @@ def convert_gastos(gastos, wb_dst, consec_inicio):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "GASTOS")
     return consec_inicio + len(gastos)
 
 
@@ -683,6 +717,7 @@ def convert_nc_ventas(nc_ventas, wb_dst, consec_inicio):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "VENTAS")
     return consec_inicio + len(calc)
 
 
@@ -749,6 +784,7 @@ def convert_ventas(ventas, nc_ventas, wb_dst, consec_inicio):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "NC VENTAS")
     return consec_inicio + len(clientes)
 
 
@@ -1004,6 +1040,7 @@ def convert_nomina(empleados_data, wb_dst, consec_inicio, fecha_nomina=None):
         consec += 1
 
     _apply_table_colors(ws_dst, start_row=2, end_row=ws_dst.max_row)
+    _insert_table(ws_dst, "NOMINA")
     return consec
 
 
