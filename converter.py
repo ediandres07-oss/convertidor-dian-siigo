@@ -865,7 +865,12 @@ def _leer_todo(wb_src):
     fechas_venta = []
 
     for row in raw:
+        if not row or len(row) < 2:
+            continue
+
         if fmt == 'reporte':
+            if len(row) < 13:
+                continue
             tipo         = str(row[0] or '').lower()
             folio        = row[2]
             fecha        = _fecha(row[4])
@@ -879,14 +884,16 @@ def _leer_todo(wb_src):
             nombre       = ''
             grupo        = str(row[14] or '').strip() if len(row) > 14 else ''
         else:
+            if len(row) < 14:
+                continue
             tipo         = str(row[0] or '').lower()
-            folio        = row[2]
-            fecha        = _fecha(row[7])
-            nit_emisor   = str(row[9]  or '').strip()
-            nit_receptor = str(row[11] or '').strip()
-            nombre       = str(row[12] or '').strip()
-            iva          = _n(row[13])
-            total        = _n(row[29])
+            folio        = row[2] if len(row) > 2 else None
+            fecha        = _fecha(row[7]) if len(row) > 7 else None
+            nit_emisor   = str(row[9]  or '').strip() if len(row) > 9 else ''
+            nit_receptor = str(row[11] or '').strip() if len(row) > 11 else ''
+            nombre       = str(row[12] or '').strip() if len(row) > 12 else ''
+            iva          = _n(row[13]) if len(row) > 13 else 0.0
+            total        = _n(row[29]) if len(row) > 29 else 0.0
             no_gravado   = 0.0
             gravado_raw  = 0.0
             nit_cliente  = nit_receptor
