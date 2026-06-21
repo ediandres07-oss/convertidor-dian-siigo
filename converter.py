@@ -827,7 +827,13 @@ def _leer_todo(wb_src):
         raw.append(row)
 
     if not conteo:
-        raise ValueError("No se encontró ningún NIT en el archivo.")
+        # Dar más contexto sobre por qué falló
+        fmt_detected, sheet_detected = _detect_format_name(wb_src)
+        raise ValueError(
+            f"No se encontró ningún NIT válido en el archivo.\n"
+            f"Detectado formato: {fmt_detected}, Hoja: {sheet_detected}\n"
+            f"Asegúrate de que sea un reporte DIAN válido con NITs correctamente formateados."
+        )
     mi_nit = conteo.most_common(1)[0][0]
 
     # Segunda pasada sobre lista Python (muy rápida, ya en memoria)
