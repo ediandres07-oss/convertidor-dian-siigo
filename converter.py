@@ -821,6 +821,9 @@ def _leer_todo(wb_src):
     conteo = Counter()
     raw = []
     for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row:
+            continue
+
         nits_encontrados = []
 
         if fmt == 'reporte':
@@ -831,9 +834,9 @@ def _leer_todo(wb_src):
             nits_encontrados = [nit_emisor, nit_receptor]
         else:
             # Formato nuevo: buscar NITs en columnas esperadas primero
-            nits_encontrados = []
-            if len(row) > 11:
+            if len(row) > 9:
                 nits_encontrados.append(str(row[9] or '').strip())   # col J
+            if len(row) > 11:
                 nits_encontrados.append(str(row[11] or '').strip())  # col L
             # Si no hay NITs válidos, buscar en todo el row (flexible)
             if not any(_es_nit_valido(n) for n in nits_encontrados if n):
