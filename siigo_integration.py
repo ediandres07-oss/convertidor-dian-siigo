@@ -174,10 +174,17 @@ class SiigoAPIClient:
             return None
 
 
-def extraer_plano_datos(plano_bytes: bytes, sheet_name: str) -> List[Dict]:
+def extraer_plano_datos(plano_stream, sheet_name: str) -> List[Dict]:
     """Extrae datos del plano Excel generado."""
     try:
-        wb = openpyxl.load_workbook(plano_bytes)
+        import io
+        if isinstance(plano_stream, io.BytesIO):
+            plano_stream.seek(0)
+
+        wb = openpyxl.load_workbook(plano_stream, data_only=True)
+        if sheet_name not in wb.sheetnames:
+            return []
+
         ws = wb[sheet_name]
 
         datos = []
@@ -185,16 +192,22 @@ def extraer_plano_datos(plano_bytes: bytes, sheet_name: str) -> List[Dict]:
             if not row[0]:  # Si tipo de comprobante está vacío, saltar
                 continue
 
+            nit = str(row[6] or '').strip() if len(row) > 6 else ''
+            if not nit or nit == '0':
+                continue
+
             datos.append({
                 'tipo': row[0],
                 'consecutivo': row[1],
                 'fecha': row[2],
-                'cuenta': row[5],
-                'nit': str(row[6] or '').strip(),
-                'cod_impuesto': row[7],
-                'descripcion': row[8],
-                'debito': row[21],
-                'credito': row[22]
+                'cuenta': row[5] if len(row) > 5 else '',
+                'nit': nit,
+                'cod_impuesto': row[7] if len(row) > 7 else None,
+                'descripcion': row[8] if len(row) > 8 else '',
+                'debito': row[21] if len(row) > 21 else 0,
+                'credito': row[22] if len(row) > 22 else 0,
+                'total': row[22] if len(row) > 22 else (row[21] if len(row) > 21 else 0),
+                'folio': str(row[1] or '')
             })
 
         return datos

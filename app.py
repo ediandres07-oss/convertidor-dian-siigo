@@ -180,9 +180,9 @@ def liquidaciones():
 
 @app.route('/api/upload-siigo', methods=['POST'])
 def upload_siigo():
-    """Sube los planos generados a Siigo Nube automáticamente."""
+    """Genera planos desde DIAN y los sube a Siigo Nube automáticamente."""
     if 'file' not in request.files:
-        return {'error': 'No se proporcionó archivo de planos'}, 400
+        return {'error': 'No se proporcionó archivo DIAN'}, 400
 
     file = request.files['file']
     if file.filename == '':
@@ -195,24 +195,40 @@ def upload_siigo():
         if not username or not password:
             return {'error': 'Credenciales de Siigo requeridas'}, 400
 
-        # Leer el archivo de planos
-        file_data = io.BytesIO(file.read())
+        # Parámetros de consecutivos
+        consec_compras = int(request.form.get('consec_compras', 371))
+        consec_nc = int(request.form.get('consec_nc', 271))
+        consec_gastos = int(request.form.get('consec_gastos', 798))
+        consec_ventas = int(request.form.get('consec_ventas', 1))
+        consec_nc_ventas = int(request.form.get('consec_nc_ventas', 1))
 
-        # Subir a Siigo
-        resultado = subir_planos_a_siigo(file_data, username, password)
+        # Paso 1: Procesar archivo DIAN y generar planos
+        file_data = io.BytesIO(file.read())
+        planos_stream = process_file(
+            file_data,
+            consec_compras=consec_compras,
+            consec_nc=consec_nc,
+            consec_gastos=consec_gastos,
+            consec_ventas=consec_ventas,
+            consec_nc_ventas=consec_nc_ventas
+        )
+        planos_stream.seek(0)
+
+        # Paso 2: Subir planos a Siigo
+        resultado = subir_planos_a_siigo(planos_stream, username, password)
 
         if 'error' in resultado:
             return resultado, 400
 
         return {
             'success': True,
-            'mensaje': f'✅ {resultado["exito"]} registros subidos a Siigo',
+            'mensaje': f'✅ Planos generados y {resultado["exito"]} registros subidos a Siigo',
             'detalles': resultado
         }, 200
 
     except Exception as e:
         traceback.print_exc()
-        return {'error': f'Error subiendo a Siigo: {str(e)}'}, 500
+        return {'error': f'Error: {str(e)}'}, 500
 
 
 if __name__ == '__main__':
