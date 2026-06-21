@@ -1,0 +1,57 @@
+INFO:     Started server process [3040]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+============================================================
+🚀 INICIANDO SERVIDOR
+============================================================
+📡 Backend: http://localhost:8000
+📚 Documentación: http://localhost:8000/docs
+============================================================
+INFO:     127.0.0.1:49608 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49613 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49664 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:59: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49665 - "POST /api/procesar-completo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:145: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49673 - "POST /api/calcular-vacaciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:1136: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49675 - "POST /api/exportar-pdf-vacaciones-individual?documento=71192731 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49677 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49688 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49689 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:59: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49690 - "POST /api/procesar-completo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49691 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49693 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:1136: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49694 - "POST /api/exportar-pdf-vacaciones-individual?documento=71192731 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49695 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49696 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49762 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49764 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:59: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49765 - "POST /api/procesar-completo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49766 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:145: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49767 - "POST /api/calcular-vacaciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49768 - "GET /health HTTP/1.1" 404 Not Found
+/Users/edison/Desktop/proyecto-subir info a siigo nube/app/routers/legacy.py:1136: FutureWarning: Passing bytes to 'read_excel' is deprecated and will be removed in a future version. To read from a byte string, wrap it in a `BytesIO` object.
+  df = pd.read_excel(contents, sheet_name='Empleados')
+INFO:     127.0.0.1:49769 - "POST /api/exportar-pdf-vacaciones-individual?documento=71192731 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49770 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49772 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3040]

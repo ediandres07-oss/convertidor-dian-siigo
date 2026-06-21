@@ -1,8 +1,9 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, jsonify
 import io
 import json
 import traceback
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
+from siigo_integration import subir_planos_a_siigo
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -175,6 +176,43 @@ def liquidaciones():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error generando liquidaciones: {str(e)}'}, 500
+
+
+@app.route('/api/upload-siigo', methods=['POST'])
+def upload_siigo():
+    """Sube los planos generados a Siigo Nube automáticamente."""
+    if 'file' not in request.files:
+        return {'error': 'No se proporcionó archivo de planos'}, 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return {'error': 'Archivo no seleccionado'}, 400
+
+    try:
+        username = request.form.get('siigo_user', '')
+        password = request.form.get('siigo_pass', '')
+
+        if not username or not password:
+            return {'error': 'Credenciales de Siigo requeridas'}, 400
+
+        # Leer el archivo de planos
+        file_data = io.BytesIO(file.read())
+
+        # Subir a Siigo
+        resultado = subir_planos_a_siigo(file_data, username, password)
+
+        if 'error' in resultado:
+            return resultado, 400
+
+        return {
+            'success': True,
+            'mensaje': f'✅ {resultado["exito"]} registros subidos a Siigo',
+            'detalles': resultado
+        }, 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error subiendo a Siigo: {str(e)}'}, 500
 
 
 if __name__ == '__main__':

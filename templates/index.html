@@ -192,6 +192,27 @@
                 </div>
                 <div id="liquidacion-message" style="margin-top:.75rem;font-size:.85rem;"></div>
             </div>
+
+            <!-- Sección Subir a Siigo -->
+            <div style="margin-top:2rem;border-top:2px solid #059669;padding:1.5rem;background:#ecfdf5;border-radius:8px;">
+                <h3 style="font-size:1rem;font-weight:600;margin-bottom:.5rem;color:#059669;">🚀 Subir Planos a Siigo Nube</h3>
+                <p style="font-size:.85rem;color:#047857;margin-bottom:1rem;">Carga los planos generados directamente a tu cuenta de Siigo Nube sin hacerlo manualmente.</p>
+                <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+                    <div class="input-group" style="flex:1;min-width:200px;">
+                        <label for="siigo-user" style="font-size:.8rem;">Usuario Siigo API</label>
+                        <input type="text" id="siigo-user" placeholder="correo@empresa.com" style="width:100%;">
+                    </div>
+                    <div class="input-group" style="flex:1;min-width:200px;">
+                        <label for="siigo-pass" style="font-size:.8rem;">Contraseña Siigo API</label>
+                        <input type="password" id="siigo-pass" placeholder="••••••••" style="width:100%;">
+                    </div>
+                    <button type="button" id="siigo-btn" class="btn-primary" style="white-space:nowrap;background:#059669;border:1px solid #059669;">
+                        Subir a Siigo
+                        <div class="spinner" id="spinner-siigo" style="display:none;"></div>
+                    </button>
+                </div>
+                <div id="siigo-message" style="margin-top:.75rem;font-size:.85rem;"></div>
+            </div>
         </div>
     </main>
 

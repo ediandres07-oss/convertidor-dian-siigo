@@ -6,7 +6,7 @@ Servidor de API para Liquidación de Prestaciones
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from app.routers import payroll
+from app.routers import payroll, legacy
 import os
 
 # ============================================
@@ -35,6 +35,7 @@ app.add_middleware(
 # ROUTERS
 # ============================================
 app.include_router(payroll.router)
+app.include_router(legacy.router)
 
 # ============================================
 # ENDPOINTS ADICIONALES
@@ -81,8 +82,8 @@ if __name__ == "__main__":
 
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=False,
         log_level="info"
     )

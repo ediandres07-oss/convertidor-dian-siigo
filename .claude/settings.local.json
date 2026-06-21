@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Claude_in_Chrome__navigate"
+      "mcp__Claude_in_Chrome__navigate",
+      "Bash(curl -s -X POST -F \"file=@EJEMPLO_EMPLEADOS.xlsx\" http://localhost:8000/api/exportar-excel-prima -o /tmp/prima.xlsx)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -X POST -F \"file=@EJEMPLO_EMPLEADOS.xlsx\" http://localhost:8000/api/exportar-pdf-prima-zip -o /tmp/prima.zip)",
+      "Bash(unzip -l /tmp/prima.zip)",
+      "Bash(file \"/Users/edison/Downloads/0616.mov\")",
+      "Bash(ffprobe -v error -show_entries format=duration,size -show_entries stream=width,height,codec_name,codec_type,r_frame_rate,bit_rate \"/Users/edison/Downloads/0616.mov\")",
+      "Bash(ffmpeg -i \"/Users/edison/Downloads/0616.mov\")"
     ]
   }
 }

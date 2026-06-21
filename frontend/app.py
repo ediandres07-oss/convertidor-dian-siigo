@@ -95,7 +95,7 @@ with tab1:
 
                     if response.status_code == 200:
                         data = response.json()
-                        if "error" in data:
+                        if "error" in data and data["error"] is not None:
                             st.error(f"❌ Error: {data['error']}")
                         else:
                             st.session_state.resultados = data
@@ -164,7 +164,7 @@ with tab3:
 
                     if response.status_code == 200:
                         data = response.json()
-                        if "error" in data:
+                        if "error" in data and data["error"] is not None:
                             st.error(f"❌ {data['error']}")
                         else:
                             st.session_state.prima_data = data
@@ -235,6 +235,68 @@ with tab3:
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
 
+            st.divider()
+            st.subheader("📄 Descargar Certificado Individual")
+
+            # Selector de empleado para prima
+            empleados_prima = datos['empleados']
+            opciones_prima = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados_prima}
+
+            empleado_prima = st.selectbox(
+                "Selecciona un empleado:",
+                options=list(opciones_prima.keys()),
+                key="select_prima_individual"
+            )
+
+            if empleado_prima:
+                documento_prima = opciones_prima[empleado_prima]
+                emp_prima = next((e for e in empleados_prima if e['documento'] == documento_prima), None)
+
+                if emp_prima:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Salario", f"${emp_prima['salario_mensual']:,.0f}")
+                    with col2:
+                        dias_modificados = st.number_input(
+                            "Días Laborados",
+                            min_value=1,
+                            max_value=360,
+                            value=int(emp_prima['dias_laborados']),
+                            key=f"dias_prima_{documento_prima}"
+                        )
+                    with col3:
+                        prima_ajustada = ((emp_prima['salario_mensual'] + emp_prima.get('auxilio_transporte', 0)) * dias_modificados) / 360
+                        st.metric("Valor Prima", f"${prima_ajustada:,.2f}")
+
+                    # Botón descargar PDF individual
+                    if st.button("📋 Descargar Certificado de Prima (Media Carta)",
+                                use_container_width=True, type="primary", key="download_prima_cert"):
+                        with st.spinner("Generando certificado..."):
+                            try:
+                                files = {'file': st.session_state.uploaded_file.getvalue()}
+                                params = {'documento': documento_prima}
+                                response = requests.post(
+                                    f"{API}/api/exportar-pdf-prima-individual",
+                                    files=files,
+                                    params=params,
+                                    timeout=30
+                                )
+
+                                if response.status_code == 200:
+                                    st.download_button(
+                                        label="⬇️ Descargar PDF",
+                                        data=response.content,
+                                        file_name=f"prima_{emp_prima['nombre'].replace(' ', '_')}.pdf",
+                                        mime="application/pdf",
+                                        use_container_width=True,
+                                        key="btn_download_prima_cert"
+                                    )
+                                    st.success("✅ Certificado generado en formato media carta")
+                                else:
+                                    st.error("Error al generar certificado")
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+
     else:
         st.info("📤 Carga un archivo para calcular prima")
 
@@ -252,7 +314,7 @@ with tab4:
 
                     if response.status_code == 200:
                         data = response.json()
-                        if "error" in data:
+                        if "error" in data and data["error"] is not None:
                             st.error(f"❌ {data['error']}")
                         else:
                             st.session_state.vacaciones_data = data
@@ -322,49 +384,48 @@ with tab4:
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
 
-    else:
-        st.info("📤 Carga un archivo para calcular vacaciones")
+            st.divider()
+            st.subheader("📄 Descargar Certificado Individual")
 
-# ========== TAB 5: INDIVIDUAL ==========
-with tab5:
-    st.subheader("👤 Descargar PDF Individual")
+            # Selector de empleado para vacaciones
+            empleados_vaca = datos['empleados']
+            opciones_vaca = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados_vaca}
 
-    if "resultados" in st.session_state:
-        datos = st.session_state.resultados
-        empleados = datos['empleados']
+            empleado_vaca = st.selectbox(
+                "Selecciona un empleado:",
+                options=list(opciones_vaca.keys()),
+                key="select_vacaciones_individual"
+            )
 
-        opciones = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados}
+            if empleado_vaca:
+                documento_vaca = opciones_vaca[empleado_vaca]
+                emp_vaca = next((e for e in empleados_vaca if e['documento'] == documento_vaca), None)
 
-        empleado_seleccionado = st.selectbox(
-            "Selecciona un empleado:",
-            options=list(opciones.keys())
-        )
+                if emp_vaca:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Salario", f"${emp_vaca['salario_mensual']:,.0f}")
+                    with col2:
+                        dias_modificados_vaca = st.number_input(
+                            "Días Laborados",
+                            min_value=1,
+                            max_value=360,
+                            value=int(emp_vaca['dias_laborados']),
+                            key=f"dias_vaca_{documento_vaca}"
+                        )
+                    with col3:
+                        vaca_ajustada = (emp_vaca['salario_mensual'] * dias_modificados_vaca) / 720
+                        st.metric("Valor Vacaciones", f"${vaca_ajustada:,.2f}")
 
-        if empleado_seleccionado:
-            documento = opciones[empleado_seleccionado]
-            emp = next((e for e in empleados if e['documento'] == documento), None)
-
-            if emp:
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Salario", f"${emp['salario_mensual']:,.0f}")
-                with col2:
-                    st.metric("Devengos", f"${emp['total_devengos']:,.0f}")
-                with col3:
-                    st.metric("Deducciones", f"${emp['total_deducciones']:,.0f}")
-                with col4:
-                    st.metric("NETO", f"${emp['neto_pagar']:,.0f}")
-
-                st.divider()
-
-                if "uploaded_file" in st.session_state:
-                    if st.button("📄 Descargar PDF", use_container_width=True):
-                        with st.spinner("Generando PDF..."):
+                    # Botón descargar PDF individual
+                    if st.button("📋 Descargar Certificado de Vacaciones (Media Carta)",
+                                use_container_width=True, type="primary", key="download_vaca_cert"):
+                        with st.spinner("Generando certificado..."):
                             try:
                                 files = {'file': st.session_state.uploaded_file.getvalue()}
-                                params = {'documento': documento}
+                                params = {'documento': documento_vaca}
                                 response = requests.post(
-                                    f"{API}/api/exportar-pdf-individual-desde-excel",
+                                    f"{API}/api/exportar-pdf-vacaciones-individual",
                                     files=files,
                                     params=params,
                                     timeout=30
@@ -374,15 +435,100 @@ with tab5:
                                     st.download_button(
                                         label="⬇️ Descargar PDF",
                                         data=response.content,
-                                        file_name=f"{emp['nombre']}.pdf",
+                                        file_name=f"vacaciones_{emp_vaca['nombre'].replace(' ', '_')}.pdf",
                                         mime="application/pdf",
-                                        use_container_width=True
+                                        use_container_width=True,
+                                        key="btn_download_vaca_cert"
                                     )
+                                    st.success("✅ Certificado generado en formato media carta")
+                                else:
+                                    st.error("Error al generar certificado")
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
 
     else:
-        st.info("📤 Carga un archivo para descargar PDFs")
+        st.info("📤 Carga un archivo para calcular vacaciones")
+
+# ========== TAB 5: INDIVIDUAL - NÓMINA ==========
+with tab5:
+    st.subheader("👤 Generar Nómina Individual")
+
+    if "resultados" in st.session_state and "uploaded_file" in st.session_state:
+        datos = st.session_state.resultados
+        empleados = datos['empleados']
+
+        opciones = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados}
+
+        empleado_seleccionado = st.selectbox(
+            "Selecciona un empleado para generar nómina:",
+            options=list(opciones.keys()),
+            key="select_nomina"
+        )
+
+        if empleado_seleccionado:
+            documento = opciones[empleado_seleccionado]
+            emp = next((e for e in empleados if e['documento'] == documento), None)
+
+            if emp:
+                st.divider()
+                st.subheader(f"📋 Nómina - {emp['nombre']}")
+
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Salario", f"${emp['salario_mensual']:,.0f}")
+                with col2:
+                    st.metric("Auxilio", f"${emp['auxilio_transporte']:,.0f}")
+                with col3:
+                    dias_nomina = st.number_input(
+                        "Días Laborados",
+                        min_value=1,
+                        max_value=360,
+                        value=int(emp['dias_laborados']),
+                        key=f"dias_nomina_{documento}"
+                    )
+                with col4:
+                    salario_dev = (emp['salario_mensual'] / 30) * dias_nomina
+                    auxilio_dev = (emp['auxilio_transporte'] / 30) * dias_nomina
+                    base = salario_dev + auxilio_dev
+                    cesantias = (base * dias_nomina) / 360
+                    intereses = (cesantias * 0.12 * dias_nomina) / 360
+                    prima = (base * dias_nomina) / 360
+                    vacaciones = (salario_dev * dias_nomina) / 720
+                    total_dev = salario_dev + auxilio_dev + cesantias + intereses + prima + vacaciones
+                    st.metric("Total Devengado", f"${total_dev:,.0f}")
+
+                st.divider()
+
+                # Botón para descargar nómina
+                if st.button("📄 Descargar Nómina PDF", use_container_width=True, type="primary", key="download_nomina_pdf"):
+                    with st.spinner("Generando nómina..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            params = {'documento': documento}
+                            response = requests.post(
+                                f"{API}/api/exportar-nomina-individual",
+                                files=files,
+                                params=params,
+                                timeout=30
+                            )
+
+                            if response.status_code == 200:
+                                st.download_button(
+                                    label="⬇️ Descargar PDF",
+                                    data=response.content,
+                                    file_name=f"nomina_{emp['nombre'].replace(' ', '_')}.pdf",
+                                    mime="application/pdf",
+                                    use_container_width=True,
+                                    key="btn_download_nomina"
+                                )
+                                st.success("✅ Nómina generada correctamente")
+                            else:
+                                st.error("Error al generar nómina")
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+
+    else:
+        st.info("📤 Carga un archivo para generar nóminas")
 
 # ========== TAB 6: COMPARATIVA ==========
 with tab6:
@@ -596,149 +742,102 @@ with tab8:
 
 # ========== TAB 9: LIQUIDACIÓN DE PRESTACIONES SOCIALES ==========
 with tab9:
-    st.subheader("🎓 Liquidación de Prestaciones Sociales")
-    st.write("Calcula cesantías, prima, vacaciones e intereses - Genera PDF")
+    st.subheader("📋 Liquidación de Prestaciones Sociales")
+    st.write("Genera PDF profesional con todas las prestaciones por empleado")
 
-    if "uploaded_file" in st.session_state:
-        if st.button("🧮 Liquidar Prestaciones", use_container_width=True, key="calc_prestaciones"):
-            with st.spinner("Calculando prestaciones..."):
-                try:
-                    import sys
-                    sys.path.insert(0, '/Users/edison/Desktop/proyecto-subir info a siigo nube')
-                    from liquidacion_prestaciones import calcular_prestaciones, generar_pdf_prestaciones
+    if "resultados" in st.session_state and "uploaded_file" in st.session_state:
+        datos = st.session_state.resultados
+        empleados = datos['empleados']
 
-                    # Leer archivo
-                    excel_file = st.session_state.uploaded_file
-                    df_empleados = pd.read_excel(excel_file, sheet_name='Empleados', dtype={'documento': str})
+        # Selector de empleado
+        opciones = {f"{e['nombre']} ({e['documento']})": e['documento'] for e in empleados}
 
-                    # CAMBIO: Validación flexible de columnas
-                    columnas_documento = ['documento', 'doc', 'cedula', 'id']
-                    columnas_nombre = ['nombre', 'name', 'empleado']
-                    columnas_salario = ['salario_mensual', 'salario', 'salary', 'sueldo']
-                    columnas_dias = ['dias_laborados', 'dias', 'dias_trabajados', 'dias_trabajo', 'days']
-                    # CAMBIO: Agregar columnas de fechas (incluye fecha entrada/retiro)
-                    columnas_fecha_inicio = ['fecha_inicio', 'fecha_ingreso', 'start_date', 'fecha_inicio_periodo', 'fecha entrada', 'fecha_entrada']
-                    columnas_fecha_fin = ['fecha_fin', 'fecha_salida', 'end_date', 'fecha_fin_periodo', 'fecha_termino', 'fecha retiro', 'fecha_retiro']
+        empleado_seleccionado = st.selectbox(
+            "Selecciona un empleado para generar PDF:",
+            options=list(opciones.keys()),
+            key="select_prestaciones"
+        )
 
-                    tiene_doc = any(col in df_empleados.columns for col in columnas_documento)
-                    tiene_nombre = any(col in df_empleados.columns for col in columnas_nombre)
-                    tiene_salario = any(col in df_empleados.columns for col in columnas_salario)
-                    tiene_dias = any(col in df_empleados.columns for col in columnas_dias)
-                    # CAMBIO: Verificar fechas
-                    tiene_fecha_inicio = any(col in df_empleados.columns for col in columnas_fecha_inicio)
-                    tiene_fecha_fin = any(col in df_empleados.columns for col in columnas_fecha_fin)
+        if empleado_seleccionado:
+            documento = opciones[empleado_seleccionado]
+            emp = next((e for e in empleados if e['documento'] == documento), None)
 
-                    columnas_faltantes = []
-                    if not tiene_doc:
-                        columnas_faltantes.append(f"documento ({', '.join(columnas_documento)})")
-                    if not tiene_nombre:
-                        columnas_faltantes.append(f"nombre ({', '.join(columnas_nombre)})")
-                    if not tiene_salario:
-                        columnas_faltantes.append(f"salario ({', '.join(columnas_salario)})")
-                    if not tiene_dias:
-                        columnas_faltantes.append(f"días ({', '.join(columnas_dias)})")
+            if emp:
+                # Mostrar resumen del empleado
+                st.divider()
+                st.subheader(f"👤 {emp['nombre']}")
 
-                    # CAMBIO: Mostrar advertencia pero permitir continuar con 30 días por defecto
-                    if not tiene_dias and (not tiene_fecha_inicio or not tiene_fecha_fin):
-                        st.warning(
-                            "⚠️ **No se encontró columna de días ni fechas completas**\n\n"
-                            "El sistema usará **30 días por defecto** (un mes estándar) para cada empleado.\n\n"
-                            "Para cálculo automático, elige una opción:\n"
-                            "• **Opción 1:** Agrega columna `dias_laborados` (o `dias`, `dias_trabajados`, etc.)\n"
-                            "• **Opción 2:** Agrega AMBAS columnas `fecha_entrada` y `fecha_retiro`\n\n"
-                            "**Columnas detectadas en tu archivo:**"
-                        )
+                col1, col2, col3, col4, col5 = st.columns(5)
+                with col1:
+                    st.metric("Documento", emp['documento'])
+                with col2:
+                    st.metric("Salario", f"${emp['salario_mensual']:,.0f}")
+                with col3:
+                    st.metric("Auxilio", f"${emp['auxilio_transporte']:,.0f}")
+                with col4:
+                    dias_prest = st.number_input(
+                        "Días Laborados",
+                        min_value=1,
+                        max_value=360,
+                        value=int(emp['dias_laborados']),
+                        key=f"dias_prest_{documento}"
+                    )
+                with col5:
+                    base_prest = emp['salario_mensual'] + emp['auxilio_transporte']
+                    cesantias_prest = (base_prest * dias_prest) / 360
+                    intereses_prest = (cesantias_prest * 0.12 * dias_prest) / 360
+                    prima_prest = (base_prest * dias_prest) / 360
+                    vacaciones_prest = (emp['salario_mensual'] * dias_prest) / 720
+                    total_prest = cesantias_prest + intereses_prest + prima_prest + vacaciones_prest
+                    st.metric("Total Prestaciones", f"${total_prest:,.0f}")
 
-                        st.divider()
-                        for col in df_empleados.columns:
-                            st.write(f"• `{col}`")
-                    else:
-                        # Calcular prestaciones
-                        df_prestaciones = calcular_prestaciones(df_empleados)
-                        st.session_state.prestaciones_data = df_prestaciones
+                st.divider()
 
-                        # Mostrar resumen
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            st.metric("👥 Empleados", len(df_prestaciones))
-                        with col2:
-                            total_cesantias = df_prestaciones['Cesantías'].sum()
-                            st.metric("🏦 Cesantías", f"${total_cesantias:,.0f}")
-                        with col3:
-                            total_intereses = df_prestaciones['Intereses Cesantías'].sum()
-                            st.metric("📈 Int. Cesantías", f"${total_intereses:,.0f}")
-                        with col4:
-                            total_prima = df_prestaciones['Prima de Servicios'].sum()
-                            st.metric("💼 Prima", f"${total_prima:,.0f}")
-                        with col5:
-                            total_vacaciones = df_prestaciones['Vacaciones'].sum()
-                            st.metric("🏖️ Vacaciones", f"${total_vacaciones:,.0f}")
+                # Desglose de prestaciones
+                st.subheader("💰 Desglose de Prestaciones")
 
-                        st.divider()
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.info(f"**Cesantías**\n\n${cesantias_prest:,.2f}")
+                with col2:
+                    st.info(f"**Intereses**\n\n${intereses_prest:,.2f}")
+                with col3:
+                    st.info(f"**Prima**\n\n${prima_prest:,.2f}")
+                with col4:
+                    st.info(f"**Vacaciones**\n\n${vacaciones_prest:,.2f}")
 
-                        # Total general
-                        total_prestaciones = df_prestaciones['Total Prestaciones'].sum()
-                        st.info(f"💰 **Total Prestaciones: ${total_prestaciones:,.2f}**")
+                st.divider()
 
-                        st.divider()
+                # Botón para descargar PDF
+                if st.button("📄 Descargar PDF Liquidación", use_container_width=True, type="primary", key="download_liquidacion_pdf"):
+                    with st.spinner("Generando PDF de liquidación..."):
+                        try:
+                            files = {'file': st.session_state.uploaded_file.getvalue()}
+                            params = {'documento': documento}
+                            response = requests.post(
+                                f"{API}/api/exportar-pdf-individual-desde-excel",
+                                files=files,
+                                params=params,
+                                timeout=30
+                            )
 
-                        # Tabla de detalles
-                        st.write("### Detalle por Empleado")
-                        df_display = df_prestaciones.copy()
-                        st.dataframe(df_display, use_container_width=True, hide_index=True)
-
-                        st.divider()
-
-                        # Botón para descargar PDF
-                        st.write("### 📥 Descargar Reporte")
-                        if st.button("📄 Descargar PDF", use_container_width=True, key="download_pdf_prestaciones"):
-                            try:
-                                # Generar PDF
-                                pdf_bytes = generar_pdf_prestaciones(df_prestaciones)
-
-                                # Crear botón de descarga
+                            if response.status_code == 200:
                                 st.download_button(
-                                    label="⬇️ Descargar Prestaciones.pdf",
-                                    data=pdf_bytes,
-                                    file_name="prestaciones_sociales.pdf",
+                                    label="⬇️ Descargar PDF",
+                                    data=response.content,
+                                    file_name=f"liquidacion_{emp['nombre'].replace(' ', '_')}.pdf",
                                     mime="application/pdf",
-                                    use_container_width=True
+                                    use_container_width=True,
+                                    key="btn_download_liquidacion"
                                 )
-                            except Exception as e:
-                                st.error(f"❌ Error generando PDF: {str(e)}")
-
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-                    import traceback
-                    st.write(traceback.format_exc())
-
-        # Mostrar datos si ya existen
-        if "prestaciones_data" in st.session_state:
-            df_prestaciones = st.session_state.prestaciones_data
-
-            col1, col2, col3, col4, col5 = st.columns(5)
-            with col1:
-                st.metric("👥 Empleados", len(df_prestaciones))
-            with col2:
-                total_cesantias = df_prestaciones['Cesantías'].sum()
-                st.metric("🏦 Cesantías", f"${total_cesantias:,.0f}")
-            with col3:
-                total_intereses = df_prestaciones['Intereses Cesantías'].sum()
-                st.metric("📈 Int. Cesantías", f"${total_intereses:,.0f}")
-            with col4:
-                total_prima = df_prestaciones['Prima de Servicios'].sum()
-                st.metric("💼 Prima", f"${total_prima:,.0f}")
-            with col5:
-                total_vacaciones = df_prestaciones['Vacaciones'].sum()
-                st.metric("🏖️ Vacaciones", f"${total_vacaciones:,.0f}")
-
-            st.divider()
-
-            total_prestaciones = df_prestaciones['Total Prestaciones'].sum()
-            st.info(f"💰 **Total Prestaciones: ${total_prestaciones:,.2f}**")
+                                st.success("✅ PDF generado correctamente")
+                            else:
+                                st.error("Error al generar PDF")
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
 
     else:
-        st.info("📤 Carga un archivo para calcular prestaciones sociales")
+        st.info("📤 Carga un archivo primero para generar liquidaciones")
 
 
 # ========== TAB 10: CONFIGURACIÓN ==========
@@ -789,3 +888,4 @@ with tab10:
     with col2:
         st.write("**Vacaciones Proporcionales**")
         st.code("Salario × Días ÷ 720")
+

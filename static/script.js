@@ -313,4 +313,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ============================================================
+    // SIIGO - SUBIR PLANOS AUTOMÁTICAMENTE
+    // ============================================================
+    const siigoBtn    = document.getElementById('siigo-btn');
+    const siigoUser   = document.getElementById('siigo-user');
+    const siigoPass   = document.getElementById('siigo-pass');
+    const spinnerSiigo = document.getElementById('spinner-siigo');
+    const msgSiigo    = document.getElementById('siigo-message');
+
+    siigoBtn && siigoBtn.addEventListener('click', async () => {
+        if (!fileInput || !fileInput.files.length) {
+            msgSiigo.innerHTML = '<span style="color:#b45309">⚠️ Primero genera los planos.</span>';
+            return;
+        }
+        if (!siigoUser.value || !siigoPass.value) {
+            msgSiigo.innerHTML = '<span style="color:#b45309">⚠️ Ingresa tus credenciales de Siigo API.</span>';
+            return;
+        }
+
+        msgSiigo.innerHTML = '';
+        setLoading('siigo-btn', 'spinner-siigo', true);
+        try {
+            // Primero generar los planos
+            const fd = new FormData(form);
+            const planeRes = await fetch('/api/convert', { method: 'POST', body: fd });
+            if (!planeRes.ok) {
+                const j = await planeRes.json();
+                throw new Error(j.error || 'Error generando planos');
+            }
+            const planeBlob = await planeRes.blob();
+
+            // Luego subir a Siigo
+            const siigoFd = new FormData();
+            siigoFd.append('file', planeBlob, 'PLANOS.xlsx');
+            siigoFd.append('siigo_user', siigoUser.value);
+            siigoFd.append('siigo_pass', siigoPass.value);
+
+            const res = await fetch('/api/upload-siigo', { method: 'POST', body: siigoFd });
+            if (!res.ok) {
+                const j = await res.json();
+                throw new Error(j.error || `Error ${res.status}`);
+            }
+            const result = await res.json();
+            showMsg('siigo-message', `✅ ${result.mensaje || 'Planos subidos a Siigo correctamente'}`, false);
+            console.log('Detalles:', result.detalles);
+        } catch (err) {
+            showMsg('siigo-message', `❌ ${err.message}`, true);
+        } finally {
+            setLoading('siigo-btn', 'spinner-siigo', false);
+        }
+    });
+
 });
