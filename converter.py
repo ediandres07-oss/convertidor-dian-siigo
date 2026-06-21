@@ -291,8 +291,12 @@ def _parse_rows(wb_src):
     EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
 
     def _es_nit_valido(v):
-        """Un NIT válido es solo dígitos, entre 6 y 15 caracteres."""
-        return v.isdigit() and 6 <= len(v) <= 15
+        """Un NIT válido es dígitos (con guiones opcionales), entre 6 y 15 caracteres."""
+        if not v:
+            return False
+        # Remover guiones y espacios
+        v_clean = str(v).replace('-', '').replace(' ', '').strip()
+        return v_clean.isdigit() and 6 <= len(v_clean) <= 15
     col_receptor = 8 if fmt == 'reporte' else 12
 
     conteo_nit = Counter()
@@ -804,8 +808,12 @@ def _leer_todo(wb_src):
     EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
 
     def _es_nit_valido(v):
-        """Un NIT válido es solo dígitos, entre 6 y 15 caracteres."""
-        return v.isdigit() and 6 <= len(v) <= 15
+        """Un NIT válido es dígitos (con guiones opcionales), entre 6 y 15 caracteres."""
+        if not v:
+            return False
+        # Remover guiones y espacios
+        v_clean = str(v).replace('-', '').replace(' ', '').strip()
+        return v_clean.isdigit() and 6 <= len(v_clean) <= 15
 
     # Primera pasada: detectar mi_nit y acumular filas crudas en memoria
     # Se cuentan EMISOR + RECEPTOR para que archivos con muchas ventas
