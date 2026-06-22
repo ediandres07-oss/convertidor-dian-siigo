@@ -184,11 +184,31 @@ def liquidaciones():
             for emp in empleados:
                 nombre = emp.get('nombre', 'Sin_nombre').replace(' ', '_')
                 try:
-                    pdf_stream = generar_liquidacion_pdf(emp, emp)
+                    # Estructura de datos para PDF
+                    datos_emp = {
+                        'nombre': emp.get('nombre', ''),
+                        'cedula': emp.get('cedula', ''),
+                        'salario': float(emp.get('salario', 0)),
+                        'fecha_inicio': emp.get('fecha_inicio', ''),
+                        'fecha_retiro': emp.get('fecha_retiro', ''),
+                        'empresa': emp.get('empresa', 'EMPRESA GIMÉNEZ ASOCIADOS'),
+                        'empresa_nit': emp.get('empresa_nit', '')
+                    }
+                    datos_liq = {
+                        'cesantias': float(emp.get('cesantias', 0)),
+                        'prima': float(emp.get('prima', 0)),
+                        'vacaciones': float(emp.get('vacaciones', 0)),
+                        'intereses_cesantias': float(emp.get('intereses', 0)),
+                        'aporte_pension': -float(emp.get('pension', 0)),
+                        'aporte_salud': -float(emp.get('salud', 0)),
+                        'otros_descuentos': -float(emp.get('otros_descuentos', 0))
+                    }
+
+                    pdf_stream = generar_liquidacion_pdf(datos_emp, datos_liq)
                     pdf_stream.seek(0)
                     zip_file.writestr(f'Liquidacion_{nombre}.pdf', pdf_stream.read())
                 except Exception as e:
-                    print(f"⚠️  Error generando PDF para {nombre}: {e}")
+                    print(f"⚠️  Error generando PDF para {nombre}: {str(e)}")
 
         zip_buffer.seek(0)
         return send_file(
