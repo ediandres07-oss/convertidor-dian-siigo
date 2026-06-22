@@ -2,10 +2,12 @@ from flask import Flask, request, send_file, render_template, jsonify
 import io
 import json
 import traceback
+import zipfile
 from datetime import datetime
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 from siigo_integration import subir_planos_a_siigo
 from dian_integration import descargar_reporte_dian
+from liquidacion_pdf import generar_liquidacion_pdf
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -168,12 +170,32 @@ def liquidaciones():
         if not any(emp.get('nombre', '').strip() for emp in empleados):
             return {'error': 'Todos los empleados deben tener un nombre'}, 400
 
-        output_stream = generate_liquidaciones(empleados)
+        # Generar Excel
+        excel_stream = generate_liquidaciones(empleados)
+
+        # Crear ZIP con Excel + PDFs de liquidación
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Agregar Excel
+            excel_stream.seek(0)
+            zip_file.writestr('LIQUIDACIONES.xlsx', excel_stream.read())
+
+            # Generar PDF para cada empleado
+            for emp in empleados:
+                nombre = emp.get('nombre', 'Sin_nombre').replace(' ', '_')
+                try:
+                    pdf_stream = generar_liquidacion_pdf(emp, emp)
+                    pdf_stream.seek(0)
+                    zip_file.writestr(f'Liquidacion_{nombre}.pdf', pdf_stream.read())
+                except Exception as e:
+                    print(f"⚠️  Error generando PDF para {nombre}: {e}")
+
+        zip_buffer.seek(0)
         return send_file(
-            output_stream,
+            zip_buffer,
             as_attachment=True,
-            download_name='LIQUIDACIONES.xlsx',
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            download_name=f'LIQUIDACIONES_{datetime.now().strftime("%Y%m%d")}.zip',
+            mimetype='application/zip'
         )
     except Exception as e:
         traceback.print_exc()
