@@ -7,7 +7,7 @@ from datetime import datetime
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 from siigo_integration import subir_planos_a_siigo
 from dian_integration import descargar_reporte_dian
-from liquidacion_pdf import generar_liquidacion_pdf
+from liquidacion_pdf_premium import generar_liquidacion_pdf_premium
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -180,7 +180,7 @@ def liquidaciones():
             excel_stream.seek(0)
             zip_file.writestr('LIQUIDACIONES.xlsx', excel_stream.read())
 
-            # Generar PDF para cada empleado
+            # Generar PDF para cada empleado (versión premium)
             for emp in empleados:
                 nombre = emp.get('nombre', 'Sin_nombre').replace(' ', '_')
                 try:
@@ -188,23 +188,47 @@ def liquidaciones():
                     datos_emp = {
                         'nombre': emp.get('nombre', ''),
                         'cedula': emp.get('cedula', ''),
+                        'cargo': emp.get('cargo', ''),
+                        'departamento': emp.get('departamento', ''),
                         'salario': float(emp.get('salario', 0)),
                         'fecha_inicio': emp.get('fecha_inicio', ''),
                         'fecha_retiro': emp.get('fecha_retiro', ''),
-                        'empresa': emp.get('empresa', 'EMPRESA GIMÉNEZ ASOCIADOS'),
-                        'empresa_nit': emp.get('empresa_nit', '')
+                        'dias_trabajados': emp.get('dias_trabajados', ''),
+                        'tipo_contrato': emp.get('tipo_contrato', 'Indefinido'),
+                        'metodo_pago': emp.get('metodo_pago', 'Transferencia Bancaria'),
+                        'banco': emp.get('banco', ''),
+                        'tipo_cuenta': emp.get('tipo_cuenta', ''),
+                        'numero_cuenta': emp.get('numero_cuenta', ''),
                     }
                     datos_liq = {
                         'cesantias': float(emp.get('cesantias', 0)),
+                        'dias_cesantias': emp.get('dias_cesantias', ''),
+                        'vr_diario_cesantias': emp.get('vr_diario_cesantias', ''),
                         'prima': float(emp.get('prima', 0)),
+                        'dias_prima': emp.get('dias_prima', ''),
+                        'vr_diario_prima': emp.get('vr_diario_prima', ''),
                         'vacaciones': float(emp.get('vacaciones', 0)),
+                        'dias_vacaciones': emp.get('dias_vacaciones', ''),
+                        'vr_diario_vacaciones': emp.get('vr_diario_vacaciones', ''),
                         'intereses_cesantias': float(emp.get('intereses', 0)),
                         'aporte_pension': -float(emp.get('pension', 0)),
                         'aporte_salud': -float(emp.get('salud', 0)),
+                        'aporte_solidaridad': -float(emp.get('solidaridad', 0)),
+                        'embargos': -float(emp.get('embargos', 0)),
                         'otros_descuentos': -float(emp.get('otros_descuentos', 0))
                     }
 
-                    pdf_stream = generar_liquidacion_pdf(datos_emp, datos_liq)
+                    # Datos de empresa
+                    empresa_data = {
+                        'nombre': emp.get('empresa', 'EMPRESA GIMÉNEZ ASOCIADOS'),
+                        'nit': emp.get('empresa_nit', ''),
+                        'representante': emp.get('representante_empresa', '')
+                    }
+
+                    # Logo (si existe)
+                    logo_path = emp.get('logo_path', None)
+
+                    pdf_stream = generar_liquidacion_pdf_premium(datos_emp, datos_liq, logo_path, empresa_data)
                     pdf_stream.seek(0)
                     zip_file.writestr(f'Liquidacion_{nombre}.pdf', pdf_stream.read())
                 except Exception as e:
