@@ -2,8 +2,10 @@ from flask import Flask, request, send_file, render_template, jsonify
 import io
 import json
 import traceback
+from datetime import datetime
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 from siigo_integration import subir_planos_a_siigo
+from dian_integration import descargar_reporte_dian
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -176,6 +178,33 @@ def liquidaciones():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error generando liquidaciones: {str(e)}'}, 500
+
+
+@app.route('/api/download-dian', methods=['POST'])
+def download_dian():
+    """Descarga reporte DIAN automáticamente."""
+    try:
+        usuario = request.json.get('usuario', '')
+        password = request.json.get('password', '')
+
+        if not usuario or not password:
+            return {'error': 'Credenciales DIAN requeridas'}, 400
+
+        # Intentar descargar
+        archivo = descargar_reporte_dian(usuario, password)
+
+        if not archivo:
+            return {'error': 'No se pudo descargar el reporte. Intenta descargarlo manualmente desde la DIAN.'}, 400
+
+        return send_file(
+            archivo,
+            as_attachment=True,
+            download_name=f'Reporte_DIAN_{datetime.now().strftime("%Y%m%d")}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error descargando: {str(e)}'}, 500
 
 
 @app.route('/api/upload-siigo', methods=['POST'])
