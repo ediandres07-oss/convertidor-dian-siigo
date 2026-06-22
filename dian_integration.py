@@ -98,26 +98,43 @@ class DIANDownloader:
     def descargar_reporte(self, año: int = None, mes: int = None) -> io.BytesIO:
         """
         Descarga el reporte DIAN para un período.
-        Si no se especifica, descarga el más reciente.
+        Nota: La DIAN cambia su interfaz frecuentemente, por lo que la descarga
+        automática puede no funcionar. Se recomienda descargar manualmente.
         """
         try:
             if not año:
                 año = datetime.now().year
 
-            print(f"📥 Descargando reporte DIAN {año}...")
+            print(f"📥 Intentando descargar reporte DIAN {año}...")
 
-            # Navegar a reportes
+            # Navegar a la sección de búsqueda
             self.driver.get("https://catalogo-vpfe.dian.gov.co/User/SearchDocument")
+            time.sleep(3)
+
+            # La DIAN usa JavaScript para cargar dinámicamente el contenido
+            # El web scraping es frágil y se rompe con cambios de interfaz
+
+            # Intentar hacer scroll para cargar más contenido
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
 
-            # TODO: Implementar lógica de descarga según la estructura actual de DIAN
-            # Esto depende de cómo esté estructurada la página en este momento
-
-            print(f"⚠️  Descarga manual requerida - La estructura de DIAN cambia frecuentemente")
-            return None
+            # Intentar encontrar botón de descarga
+            try:
+                descarga_btns = self.driver.find_elements(By.XPATH, "//button[contains(text(), 'Descargar')]")
+                if descarga_btns:
+                    descarga_btns[0].click()
+                    print("📥 Descargando...")
+                    time.sleep(5)
+                    return True  # Indicar que se inició
+                else:
+                    print("⚠️  No se encontró botón de descarga")
+                    return None
+            except Exception as e:
+                print(f"⚠️  Error buscando botón de descarga: {e}")
+                return None
 
         except Exception as e:
-            print(f"❌ Error descargando: {e}")
+            print(f"❌ Error en descarga: {e}")
             return None
 
     def descargar(self) -> io.BytesIO:

@@ -342,6 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!res.ok) {
                 const j = await res.json();
+                if (j.instrucciones) {
+                    const instr = '<strong>Descarga manual:</strong><br>' +
+                                  j.instrucciones.map(i => '• ' + i).join('<br>');
+                    msgDian.innerHTML = `<span style="color:#b45309">⚠️ ${j.error}<br><br>${instr}</span>`;
+                    return;
+                }
                 throw new Error(j.error || `Error ${res.status}`);
             }
 

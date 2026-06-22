@@ -194,7 +194,17 @@ def download_dian():
         archivo = descargar_reporte_dian(usuario, password)
 
         if not archivo:
-            return {'error': 'No se pudo descargar el reporte. Intenta descargarlo manualmente desde la DIAN.'}, 400
+            return {
+                'error': 'No se pudo descargar automáticamente.',
+                'instrucciones': [
+                    '1. Ve a https://catalogo-vpfe.dian.gov.co/User/PersonLogin',
+                    '2. Ingresa tus credenciales',
+                    '3. Menú: "Consulta de Documentos" → "Buscar Documento"',
+                    '4. Filtra por período (ej: 2025)',
+                    '5. Clickea "Descargar Reporte" (Excel)',
+                    '6. Sube el archivo aquí en "Selecciona archivo"'
+                ]
+            }, 400
 
         return send_file(
             archivo,
