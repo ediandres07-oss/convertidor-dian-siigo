@@ -314,6 +314,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
+    // DIAN - DESCARGAR REPORTES
+    // ============================================================
+    const dianBtn     = document.getElementById('dian-btn');
+    const dianUser    = document.getElementById('dian-user');
+    const dianPass    = document.getElementById('dian-pass');
+    const spinnerDian = document.getElementById('spinner-dian');
+    const msgDian     = document.getElementById('dian-message');
+
+    dianBtn && dianBtn.addEventListener('click', async () => {
+        if (!dianUser.value || !dianPass.value) {
+            msgDian.innerHTML = '<span style="color:#b45309">⚠️ Ingresa tus credenciales de DIAN.</span>';
+            return;
+        }
+
+        msgDian.innerHTML = '';
+        setLoading('dian-btn', 'spinner-dian', true);
+        try {
+            const res = await fetch('/api/download-dian', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuario: dianUser.value,
+                    password: dianPass.value
+                })
+            });
+
+            if (!res.ok) {
+                const j = await res.json();
+                throw new Error(j.error || `Error ${res.status}`);
+            }
+
+            await downloadBlob(res, `Reporte_DIAN_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showMsg('dian-message', '✅ Reporte descargado. Ahora sube el archivo a los planos.', false);
+        } catch (err) {
+            showMsg('dian-message', `❌ ${err.message}`, true);
+        } finally {
+            setLoading('dian-btn', 'spinner-dian', false);
+        }
+    });
+
+    // ============================================================
     // SIIGO - SUBIR PLANOS AUTOMÁTICAMENTE
     // ============================================================
     const siigoBtn    = document.getElementById('siigo-btn');

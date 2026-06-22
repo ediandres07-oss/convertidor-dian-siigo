@@ -193,6 +193,27 @@
                 <div id="liquidacion-message" style="margin-top:.75rem;font-size:.85rem;"></div>
             </div>
 
+            <!-- Sección Descargar de DIAN -->
+            <div style="margin-top:2rem;border-top:2px solid #7c3aed;padding:1.5rem;background:#f3e8ff;border-radius:8px;">
+                <h3 style="font-size:1rem;font-weight:600;margin-bottom:.5rem;color:#7c3aed;">📥 Descargar Reportes de DIAN</h3>
+                <p style="font-size:.85rem;color:#6d28d9;margin-bottom:1rem;">Descarga automáticamente tu reporte de la DIAN sin ir al sitio web.</p>
+                <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+                    <div class="input-group" style="flex:1;min-width:200px;">
+                        <label for="dian-user" style="font-size:.8rem;">Usuario DIAN</label>
+                        <input type="text" id="dian-user" placeholder="tu@email.com" style="width:100%;">
+                    </div>
+                    <div class="input-group" style="flex:1;min-width:200px;">
+                        <label for="dian-pass" style="font-size:.8rem;">Contraseña DIAN</label>
+                        <input type="password" id="dian-pass" placeholder="••••••••" style="width:100%;">
+                    </div>
+                    <button type="button" id="dian-btn" class="btn-primary" style="white-space:nowrap;background:#7c3aed;border:1px solid #7c3aed;">
+                        Descargar de DIAN
+                        <div class="spinner" id="spinner-dian" style="display:none;"></div>
+                    </button>
+                </div>
+                <div id="dian-message" style="margin-top:.75rem;font-size:.85rem;"></div>
+            </div>
+
             <!-- Sección Subir a Siigo -->
             <div style="margin-top:2rem;border-top:2px solid #059669;padding:1.5rem;background:#ecfdf5;border-radius:8px;">
                 <h3 style="font-size:1rem;font-weight:600;margin-bottom:.5rem;color:#059669;">🚀 Subir Planos a Siigo Nube</h3>
