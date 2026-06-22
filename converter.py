@@ -890,8 +890,10 @@ def _leer_todo(wb_src):
             folio        = row[2] if len(row) > 2 else None
             fecha        = _fecha(row[7]) if len(row) > 7 else None
             nit_emisor   = str(row[9]  or '').strip() if len(row) > 9 else ''
+            nombre_emisor = str(row[10] or '').strip() if len(row) > 10 else ''
             nit_receptor = str(row[11] or '').strip() if len(row) > 11 else ''
-            nombre       = str(row[12] or '').strip() if len(row) > 12 else ''
+            nombre_receptor = str(row[12] or '').strip() if len(row) > 12 else ''
+            nombre       = nombre_receptor  # Usar receptor por defecto
             iva          = _n(row[13]) if len(row) > 13 else 0.0
             total        = _n(row[29]) if len(row) > 29 else 0.0
             no_gravado   = 0.0
@@ -922,8 +924,11 @@ def _leer_todo(wb_src):
             # Usar base_r (total-iva) siempre para garantizar balance exacto.
             # gravado_raw puede venir de fórmulas Excel que leen como 0.
             grav = base_r; nograv = 0.0
+            # Para compras/gastos, usar nombre del emisor (el proveedor)
+            nombre_tercero = nombre_emisor if fmt != 'reporte' else ''
 
             doc = {'folio': folio, 'fecha': fecha, 'nit': nit_emisor,
+                   'nombre': nombre_tercero,
                    'no_gravado': nograv, 'gravado': grav, 'iva': iva_r, 'total': total_r}
 
             if es_nc:
@@ -1436,7 +1441,7 @@ def _balance_desde_planos(wb_src):
     from collections import defaultdict
 
     aux = defaultdict(lambda: [0.0, 0.0])   # (cuenta, nit) -> [deb, cred]
-    nit_nombres = {}  # nit -> nombre (del tercer)
+    nit_nombres = {}  # nit -> nombre (del tercero, desde campo descripción)
     fechas = []
 
     for sheet in wb_src.sheetnames:
@@ -1448,15 +1453,16 @@ def _balance_desde_planos(wb_src):
                 continue
             cuenta = str(row[5] or '').strip()
             nit    = str(row[6] or '').strip()
-            desc   = str(row[9] or '').strip() if len(row) > 9 else ''  # descripción puede tener nombre
+            # La descripción (columna 10, índice 9) puede contener el nombre del tercero
+            desc   = str(row[9] or '').strip() if len(row) > 9 else ''
             deb    = _n(row[21])
             cred   = _n(row[22])
             if not cuenta or not cuenta.isdigit():
                 continue
             aux[(cuenta, nit)][0] += deb
             aux[(cuenta, nit)][1] += cred
-            # Guardar nombre del tercero (si no lo tenemos aún)
-            if nit and nit not in nit_nombres and desc:
+            # Guardar nombre del tercero (primero que veamos para este NIT)
+            if nit and nit not in nit_nombres and desc and not desc.startswith('CONSOLIDADA'):
                 nit_nombres[nit] = desc
             if row[2]:
                 fechas.append(row[2])
