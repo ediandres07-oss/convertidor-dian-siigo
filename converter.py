@@ -1430,12 +1430,13 @@ PUC_NOMBRES = {
 def _balance_desde_planos(wb_src):
     """
     Construye las filas del balance de prueba por tercero a partir de un
-    libro de PLANOS Siigo (hojas con columnas: cuenta=6, nit=7, deb=22, cred=23).
+    libro de PLANOS Siigo (hojas con columnas: cuenta=6, nit=7, desc=9, deb=22, cred=23).
     Retorna (rows_data, periodo).
     """
     from collections import defaultdict
 
     aux = defaultdict(lambda: [0.0, 0.0])   # (cuenta, nit) -> [deb, cred]
+    nit_nombres = {}  # nit -> nombre (del tercer)
     fechas = []
 
     for sheet in wb_src.sheetnames:
@@ -1447,12 +1448,16 @@ def _balance_desde_planos(wb_src):
                 continue
             cuenta = str(row[5] or '').strip()
             nit    = str(row[6] or '').strip()
+            desc   = str(row[9] or '').strip() if len(row) > 9 else ''  # descripción puede tener nombre
             deb    = _n(row[21])
             cred   = _n(row[22])
             if not cuenta or not cuenta.isdigit():
                 continue
             aux[(cuenta, nit)][0] += deb
             aux[(cuenta, nit)][1] += cred
+            # Guardar nombre del tercero (si no lo tenemos aún)
+            if nit and nit not in nit_nombres and desc:
+                nit_nombres[nit] = desc
             if row[2]:
                 fechas.append(row[2])
 
@@ -1493,7 +1498,9 @@ def _balance_desde_planos(wb_src):
         terceros = sorted([(nit, v) for (c2, nit), v in aux.items() if c2 == cta])
         nombre8 = PUC_NOMBRES.get(cta, '')
         for nit, (d, c) in terceros:
-            _row('Auxiliar', cta, nombre8, nit, '', d, c)
+            # Incluir nombre del tercero si está disponible
+            nombre_tercero = nit_nombres.get(nit, '')
+            _row('Auxiliar', cta, nombre8, nit, nombre_tercero, d, c)
 
     fechas_dt = [f for f in fechas if hasattr(f, 'strftime')]
     if fechas_dt:
