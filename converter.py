@@ -990,7 +990,8 @@ def _cargar_nomina_balance(balance_path):
     import openpyxl as _opx
     from collections import defaultdict as _dd
     wb = _opx.load_workbook(balance_path, data_only=True, read_only=True)
-    ws = wb['Sheet1']
+    # Usar la primera hoja disponible (evita asumir 'Sheet1')
+    ws = wb[wb.sheetnames[0]]
     CTAS_NOM = {
         '52050601','52051801','52052701','52053001','52053301',
         '52053601','52053901','52056801','52056901','52057001',
