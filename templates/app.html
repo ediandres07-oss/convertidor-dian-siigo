@@ -451,6 +451,19 @@
         </style>
 </head>
 <body>
+        <!-- LOGOUT BUTTON -->
+        <button onclick="logout()" style="position: fixed; top: 20px; right: 20px; background: #dc2626; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; z-index: 999; font-size: 14px;">
+            🚪 Logout
+        </button>
+
+        <script>
+        function logout() {
+            if (confirm('¿Cerrar sesión?')) {
+                window.location.href = '/logout';
+            }
+        }
+        </script>
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="logo">

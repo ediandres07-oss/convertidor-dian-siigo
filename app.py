@@ -1,9 +1,10 @@
 # REBUILD FORCE v2
-from flask import Flask, request, send_file, render_template, jsonify
+from flask import Flask, request, send_file, render_template, jsonify, redirect, session
 import io
 import json
 import traceback
 from datetime import datetime
+from functools import wraps
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 from siigo_integration import subir_planos_a_siigo
 from dian_integration import descargar_reporte_dian
@@ -13,13 +14,57 @@ import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
-# v1.5
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
+app.secret_key = 'dev-key-change-in-production'
+
+# Usuarios válidos (cambiar en producción)
+USUARIOS_VALIDOS = {
+    'admin': 'admin123',
+    'usuario': 'usuario123',
+    'edison': 'edison'
+}
+
+
+def require_login(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('autenticado'):
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
+@require_login
 def index():
     return render_template('app.html')
+
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Página de login"""
+    if request.method == 'POST':
+        usuario = request.form.get('usuario', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        if usuario in USUARIOS_VALIDOS and USUARIOS_VALIDOS[usuario] == password:
+            from flask import session
+            session['usuario'] = usuario
+            session['autenticado'] = True
+            return jsonify({'success': True, 'mensaje': 'Login exitoso'}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Usuario o contraseña incorrectos'}), 401
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Cerrar sesión"""
+    from flask import session
+    session.clear()
+    return redirect('/login')
+
 
 
 @app.route('/api/test-validar', methods=['POST'])
