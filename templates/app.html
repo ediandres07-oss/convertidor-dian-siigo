@@ -1497,13 +1497,21 @@
         // ===== LIQUIDACIONES =====
         async function validarLiquidacion() {
             const file = document.getElementById('liq-archivo').files[0];
-            if (!file) { alert('Selecciona archivo'); return; }
+            if (!file) { showMsg('❌ Selecciona un archivo', 'err'); return; }
             const fd = new FormData(); fd.append('file', file);
+            showMsg('⏳ Validando...', 'info');
             try {
                 const r = await fetch('/api/validar-liquidacion', {method: 'POST', body: fd});
                 const d = await r.json();
-                showMsg(d.valido ? '✅ ' + d.mensaje : '❌ ' + d.error, d.valido ? 'ok' : 'err');
-            } catch(e) { showMsg('❌ Error: ' + e.message, 'err'); }
+                if (d.valido) {
+                    showMsg('✅ ' + d.mensaje, 'ok');
+                } else {
+                    showMsg('❌ ' + (d.error || 'Validación fallida'), 'err');
+                }
+            } catch(e) {
+                showMsg('❌ Error: ' + e.message, 'err');
+                console.error('validarLiquidacion:', e);
+            }
         }
 
         async function cargarEmpleados() {
