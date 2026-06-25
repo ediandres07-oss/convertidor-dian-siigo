@@ -8,7 +8,7 @@ from converter import process_file, process_liquidacion_iva, _cargar_nomina_bala
 from siigo_integration import subir_planos_a_siigo
 from dian_integration import descargar_reporte_dian
 from liquidacion_pdf_premium import generar_liquidacion_pdf_premium
-from retencion import calcular_retencion, generar_reporte_retenciones
+from retencion import calcular_retencion, generar_reporte_retenciones_excel
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -158,7 +158,10 @@ def liquidar_retenciones():
                         planos_data['ventas'].append(doc)
 
         # Generar reporte de retenciones
-        output_stream = generar_reporte_retenciones_excel(planos_data)
+        wb = generar_reporte_retenciones_excel(planos_data)
+        output_stream = io.BytesIO()
+        wb.save(output_stream)
+        output_stream.seek(0)
 
         original_name = file.filename.rsplit('.', 1)[0]
         download_name = f"RETENCIONES_{original_name}.xlsx"
@@ -425,97 +428,6 @@ if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=True, port=port, host='127.0.0.1')
-
-
-def generar_reporte_retenciones_excel(planos_data):
-    """Genera Excel con reporte de retenciones"""
-    wb = Workbook()
-    ws = wb.active
-    ws.title = 'Retenciones'
-    
-    # Encabezados
-    headers = ['Tipo', 'Documento', 'Fecha', 'NIT', 'Tercero', 'Base Gravable', 'Tasa %', 'Valor Retención']
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(1, col)
-        cell.value = header
-        cell.font = Font(bold=True, color='FFFFFF')
-        cell.fill = PatternFill(start_color='1a3a5c', end_color='1a3a5c', fill_type='solid')
-        cell.alignment = Alignment(horizontal='center')
-    
-    row = 2
-    totales = {'base': 0, 'retencion': 0}
-    
-    # Ventas
-    for doc in planos_data.get('ventas', []):
-        base = doc.get('total', 0) - doc.get('iva', 0)
-        ret = calcular_retencion(base, 'ventas', doc.get('nit', ''))
-        ws.cell(row, 1).value = 'Venta'
-        ws.cell(row, 2).value = doc.get('folio', '')
-        ws.cell(row, 3).value = doc.get('fecha', '')
-        ws.cell(row, 4).value = doc.get('nit', '')
-        ws.cell(row, 5).value = doc.get('nombre', '')
-        ws.cell(row, 6).value = ret['base']
-        ws.cell(row, 7).value = ret['tasa']
-        ws.cell(row, 8).value = ret['valor']
-        totales['base'] += ret['base']
-        totales['retencion'] += ret['valor']
-        row += 1
-    
-    # Compras
-    for doc in planos_data.get('compras', []):
-        base = doc.get('total', 0) - doc.get('iva', 0)
-        ret = calcular_retencion(base, 'compras', doc.get('nit', ''))
-        ws.cell(row, 1).value = 'Compra'
-        ws.cell(row, 2).value = doc.get('folio', '')
-        ws.cell(row, 3).value = doc.get('fecha', '')
-        ws.cell(row, 4).value = doc.get('nit', '')
-        ws.cell(row, 5).value = doc.get('nombre', '')
-        ws.cell(row, 6).value = ret['base']
-        ws.cell(row, 7).value = ret['tasa']
-        ws.cell(row, 8).value = ret['valor']
-        totales['base'] += ret['base']
-        totales['retencion'] += ret['valor']
-        row += 1
-    
-    # Gastos
-    for doc in planos_data.get('gastos', []):
-        base = doc.get('total', 0) - doc.get('iva', 0)
-        ret = calcular_retencion(base, 'gastos', doc.get('nit', ''))
-        ws.cell(row, 1).value = 'Gasto'
-        ws.cell(row, 2).value = doc.get('folio', '')
-        ws.cell(row, 3).value = doc.get('fecha', '')
-        ws.cell(row, 4).value = doc.get('nit', '')
-        ws.cell(row, 5).value = doc.get('nombre', '')
-        ws.cell(row, 6).value = ret['base']
-        ws.cell(row, 7).value = ret['tasa']
-        ws.cell(row, 8).value = ret['valor']
-        totales['base'] += ret['base']
-        totales['retencion'] += ret['valor']
-        row += 1
-    
-    # Totales
-    row += 1
-    ws.cell(row, 5).value = 'TOTAL'
-    ws.cell(row, 5).font = Font(bold=True)
-    ws.cell(row, 6).value = totales['base']
-    ws.cell(row, 6).font = Font(bold=True)
-    ws.cell(row, 8).value = totales['retencion']
-    ws.cell(row, 8).font = Font(bold=True)
-    
-    # Ajustar anchos
-    ws.column_dimensions['A'].width = 12
-    ws.column_dimensions['B'].width = 15
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 15
-    ws.column_dimensions['E'].width = 30
-    ws.column_dimensions['F'].width = 15
-    ws.column_dimensions['G'].width = 10
-    ws.column_dimensions['H'].width = 15
-    
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output
 
 
 @app.route('/api/retenciones', methods=['POST'])
