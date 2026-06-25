@@ -725,15 +725,19 @@
             }
 
             const fd = new FormData();
-            fd.append('archivo', file);
-            fd.append('consec_compras', document.getElementById('consec_compras').value);
-            fd.append('consec_nc', document.getElementById('consec_nc').value);
-            fd.append('consec_gastos', document.getElementById('consec_gastos').value);
-            fd.append('consec_ventas', document.getElementById('consec_ventas').value);
+            fd.append('file', file);
+            fd.append('consec_compras', document.getElementById('consec_compras').value || '371');
+            fd.append('consec_nc', document.getElementById('consec_nc').value || '271');
+            fd.append('consec_gastos', document.getElementById('consec_gastos').value || '798');
+            fd.append('consec_ventas', document.getElementById('consec_ventas').value || '1');
+            fd.append('consec_nc_ventas', '1');
 
             try {
                 const res = await fetch('/api/convert', { method: 'POST', body: fd });
-                if (!res.ok) throw new Error(`Error ${res.status}`);
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`Error ${res.status}: ${text}`);
+                }
 
                 const blob = await res.blob();
                 downloadFile(blob, 'PLANOS.xlsx');
