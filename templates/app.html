@@ -1090,6 +1090,153 @@
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         }
-    </script>
+    
+        // ===== LIQUIDACIONES MEJORADAS =====
+        
+        async function validarLiquidacion() {
+            const archivo = document.getElementById('liq-archivo').files[0];
+            if (!archivo) {
+                alert('Selecciona un archivo Excel');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', archivo);
+
+            try {
+                const response = await fetch('/api/validar-liquidacion', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.valido) {
+                    showLiqMessage(data.mensaje, 'success');
+                    
+                    // Cargar lista de empleados
+                    const empleados = [];
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        // Aquí podrías parsear el Excel y cargar empleados
+                        // Por ahora mostramos cuántos hay
+                        const select = document.getElementById('liq-select-empleado');
+                        select.innerHTML = '<option value="">-- Selecciona empleado --</option>';
+                        
+                        for (let i = 0; i < data.empleados_count; i++) {
+                            const opt = document.createElement('option');
+                            opt.value = i;
+                            opt.textContent = `Empleado ${i + 1}`;
+                            select.appendChild(opt);
+                        }
+                        
+                        document.getElementById('liq-empleados').style.display = 'block';
+                    };
+                    reader.readAsArrayBuffer(archivo);
+                } else {
+                    showLiqMessage('❌ ' + data.error, 'error');
+                }
+            } catch (error) {
+                showLiqMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        async function previewLiquidacion() {
+            const archivo = document.getElementById('liq-archivo').files[0];
+            const index = document.getElementById('liq-select-empleado').value;
+            const empresa = document.getElementById('liq-empresa').value || 'Mi Empresa';
+            
+            if (!archivo || index === '') {
+                alert('Selecciona archivo y empleado');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', archivo);
+            formData.append('empresa_nombre', empresa);
+
+            try {
+                const response = await fetch(`/api/previsualizar-liquidacion/${index}/${empresa}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    showLiqMessage('✅ PDF abierto en nueva ventana', 'success');
+                } else {
+                    const error = await response.json();
+                    showLiqMessage('❌ ' + error.error, 'error');
+                }
+            } catch (error) {
+                showLiqMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        async function generarLiquidacionesLote() {
+            const archivo = document.getElementById('liq-archivo').files[0];
+            const empresa = document.getElementById('liq-empresa').value || 'Mi Empresa';
+            const nit = document.getElementById('liq-nit').value || '';
+            
+            if (!archivo) {
+                alert('Selecciona un archivo Excel');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', archivo);
+            formData.append('empresa_nombre', empresa);
+            formData.append('empresa_nit', nit);
+
+            showLiqMessage('⏳ Generando liquidaciones...', 'info');
+
+            try {
+                const response = await fetch('/api/generar-liquidaciones-lote', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Liquidaciones.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showLiqMessage('✅ Liquidaciones generadas y descargadas', 'success');
+                } else {
+                    const error = await response.json();
+                    showLiqMessage('❌ ' + error.error, 'error');
+                }
+            } catch (error) {
+                showLiqMessage('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        function showLiqMessage(msg, type) {
+            const container = document.getElementById('liq-mensaje');
+            container.textContent = msg;
+            container.style.display = 'block';
+            
+            if (type === 'success') {
+                container.style.borderLeftColor = '#059669';
+                container.style.background = 'rgba(5, 150, 105, 0.1)';
+                container.style.color = '#059669';
+            } else if (type === 'error') {
+                container.style.borderLeftColor = '#dc2626';
+                container.style.background = 'rgba(220, 38, 38, 0.1)';
+                container.style.color = '#dc2626';
+            } else {
+                container.style.borderLeftColor = '#2980b9';
+                container.style.background = 'rgba(41, 128, 185, 0.1)';
+                container.style.color = '#2980b9';
+            }
+        }
+
+</script>
 </body>
 </html>
