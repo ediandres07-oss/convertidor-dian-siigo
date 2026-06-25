@@ -1433,7 +1433,38 @@ PUC_NOMBRES = {
 }
 
 
-def _balance_desde_planos(wb_src):
+def _extraer_nombres_dian(data):
+    """
+    Extrae mapa de NIT -> Nombre desde un archivo DIAN original.
+    Retorna dict con {nit: nombre}.
+    """
+    nit_nombres = {}
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
+        # Buscar la hoja REPORTE o la primera que tenga datos
+        for sheet in wb.sheetnames:
+            ws = wb[sheet]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row or len(row) < 13:
+                    continue
+                # NIT emisor en columna 10 (índice 9), nombre en columna 11 (índice 10)
+                nit_emisor = str(row[9] or '').strip() if len(row) > 9 else ''
+                nombre_emisor = str(row[10] or '').strip() if len(row) > 10 else ''
+                # NIT receptor en columna 12 (índice 11), nombre en columna 13 (índice 12)
+                nit_receptor = str(row[11] or '').strip() if len(row) > 11 else ''
+                nombre_receptor = str(row[12] or '').strip() if len(row) > 12 else ''
+
+                # Guardar nombres
+                if nit_emisor and nombre_emisor and nit_emisor not in nit_nombres:
+                    nit_nombres[nit_emisor] = nombre_emisor
+                if nit_receptor and nombre_receptor and nit_receptor not in nit_nombres:
+                    nit_nombres[nit_receptor] = nombre_receptor
+    except:
+        pass
+    return nit_nombres
+
+
+def _balance_desde_planos(wb_src, nit_nombres_override=None):
     """
     Construye las filas del balance de prueba por tercero a partir de un
     libro de PLANOS Siigo (hojas con columnas: cuenta=6, nit=7, desc=9, deb=22, cred=23).
@@ -1442,7 +1473,8 @@ def _balance_desde_planos(wb_src):
     from collections import defaultdict
 
     aux = defaultdict(lambda: [0.0, 0.0])   # (cuenta, nit) -> [deb, cred]
-    nit_nombres = {}  # nit -> nombre (del tercero, desde campo descripción)
+    # Usar nombres del DIAN si se proporcionan, si no, buscar en descripción
+    nit_nombres = nit_nombres_override.copy() if nit_nombres_override else {}
     fechas = []
 
     for sheet in wb_src.sheetnames:
@@ -1564,14 +1596,18 @@ def generate_balance_prueba(input_stream):
     else:
         # ── Construir balance desde planos o reporte DIAN ────────────
         primera_celda = str(ws_src.cell(1, 1).value or '').strip()
+        nit_nombres_dian = {}
+
         if primera_celda == 'Tipo de comprobante':
             wb_planos = wb_src               # ya es un archivo de planos
         else:
-            # Es un reporte DIAN: generar los planos internamente
+            # Es un reporte DIAN: extraer nombres antes de generar planos
+            nit_nombres_dian = _extraer_nombres_dian(data)
+            # Generar los planos internamente
             planos_stream = process_file(io.BytesIO(data))
             wb_planos = openpyxl.load_workbook(planos_stream, data_only=True)
 
-        rows_data, periodo = _balance_desde_planos(wb_planos)
+        rows_data, periodo = _balance_desde_planos(wb_planos, nit_nombres_override=nit_nombres_dian)
         empresa = 'Balance generado desde movimientos'
         nit_emp = ''
 
