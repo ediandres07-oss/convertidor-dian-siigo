@@ -1403,6 +1403,73 @@
             }
         }
 
+
+
+        async function descargarTodosPDF() {
+            const archivo = document.getElementById('liq-archivo').files[0];
+            const empresa = document.getElementById('liq-empresa').value || 'Mi Empresa';
+            const nit = document.getElementById('liq-nit').value || '';
+            
+            if (!archivo) {
+                showLiqMessage('❌ Selecciona un archivo Excel', 'error');
+                return;
+            }
+
+            showLiqMessage('⏳ Descargando todos los PDFs...', 'info');
+
+            const formDataList = new FormData();
+            formDataList.append('file', archivo);
+
+            try {
+                const responseList = await fetch('/api/listar-empleados-liquidar', {
+                    method: 'POST',
+                    body: formDataList
+                });
+
+                const dataList = await responseList.json();
+                
+                if (!dataList.empleados || dataList.empleados.length === 0) {
+                    showLiqMessage('❌ No hay empleados para descargar', 'error');
+                    return;
+                }
+
+                let descargados = 0;
+                for (const emp of dataList.empleados) {
+                    const formData = new FormData();
+                    formData.append('file', archivo);
+                    formData.append('empresa_nombre', empresa);
+                    formData.append('empresa_nit', nit);
+
+                    try {
+                        const response = await fetch(`/api/descargar-liquidacion/${emp.id}`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `Liquidacion_${emp.nombre.replace(/ /g, "_")}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                            descargados++;
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    } catch (error) {
+                        console.error(`Error: ${error.message}`);
+                    }
+                }
+
+                showLiqMessage(`✅ Se descargaron ${descargados}/${dataList.empleados.length} PDFs`, 'success');
+            } catch (error) {
+                showLiqMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
 </script>
 </body>
 </html>
