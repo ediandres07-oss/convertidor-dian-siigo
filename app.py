@@ -16,6 +16,10 @@ app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 def index():
     return render_template('index.html')
 
+@app.route('/app')
+def app_page():
+    return render_template('app.html')
+
 @app.route('/api/convert', methods=['POST'])
 def convert():
     if 'file' not in request.files:
