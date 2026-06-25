@@ -1456,27 +1456,15 @@ def _balance_desde_planos(wb_src):
             nit    = str(row[6] or '').strip()
             # La descripción (columna 10, índice 9) puede contener el nombre del tercero
             desc   = str(row[9] or '').strip() if len(row) > 9 else ''
-            # También buscar nombre en otros campos si disponible
-            tercero_info = str(row[8] or '').strip() if len(row) > 8 else ''
-
             deb    = _n(row[21])
             cred   = _n(row[22])
             if not cuenta or not cuenta.isdigit():
                 continue
             aux[(cuenta, nit)][0] += deb
             aux[(cuenta, nit)][1] += cred
-
             # Guardar nombre del tercero (primero que veamos para este NIT)
-            if nit and nit not in nit_nombres:
-                # Intentar obtener nombre de múltiples fuentes
-                nombre = ''
-                if tercero_info and len(tercero_info) > 3 and not tercero_info.isdigit():
-                    nombre = tercero_info
-                elif desc and len(desc) > 3 and not desc.startswith('CONSOLIDADA') and not desc.isdigit():
-                    nombre = desc
-
-                if nombre:
-                    nit_nombres[nit] = nombre
+            if nit and nit not in nit_nombres and desc and not desc.startswith('CONSOLIDADA'):
+                nit_nombres[nit] = desc
             if row[2]:
                 fechas.append(row[2])
 
