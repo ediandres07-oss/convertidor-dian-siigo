@@ -711,8 +711,13 @@
             localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
         }
 
-        // Cargar modo oscuro si está guardado
-        if (localStorage.getItem('darkMode') === 'true') {
+        // Cargar modo oscuro si está guardado (por defecto: activado)
+        const darkModeSaved = localStorage.getItem('darkMode');
+        if (darkModeSaved === null) {
+            // Primera vez: activar oscuro por defecto
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'true');
+        } else if (darkModeSaved === 'true') {
             document.body.classList.add('dark-mode');
         }
 
