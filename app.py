@@ -20,9 +20,7 @@ app.secret_key = 'dev-key-change-in-production'
 
 # Usuarios válidos (cambiar en producción)
 USUARIOS_VALIDOS = {
-    'admin': 'admin123',
-    'usuario': 'usuario123',
-    'edison': 'edison'
+    'ediandres@hotmail.com': 'Samuel2812*'
 }
 
 
