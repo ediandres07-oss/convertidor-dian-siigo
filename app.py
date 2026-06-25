@@ -106,12 +106,59 @@ def liquidar_retenciones():
         return {'error': 'Archivo no seleccionado'}, 400
 
     try:
-        input_stream = io.BytesIO(file.read())
-        output_stream = generar_reporte_retenciones_excel({
-            'compras': [],
-            'ventas': [],
-            'gastos': []
-        })
+        import openpyxl
+
+        # Leer el archivo DIAN
+        file_data = file.read()
+        wb = openpyxl.load_workbook(io.BytesIO(file_data), data_only=True)
+
+        # Extraer documentos del DIAN
+        planos_data = {'compras': [], 'ventas': [], 'gastos': []}
+
+        # Buscar la hoja de reportes
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+
+            # Detectar si es un reporte DIAN o planos
+            primera_celda = str(ws.cell(1, 1).value or '').strip()
+
+            if 'REPORTE' in sheet_name.upper() or 'Rp_Doc' in sheet_name:
+                # Es un reporte DIAN - extraer documentos
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or len(row) < 13:
+                        continue
+
+                    nit_emisor = str(row[9] or '').strip() if len(row) > 9 else ''
+                    nombre_emisor = str(row[10] or '').strip() if len(row) > 10 else ''
+                    nit_receptor = str(row[11] or '').strip() if len(row) > 11 else ''
+                    nombre_receptor = str(row[12] or '').strip() if len(row) > 12 else ''
+                    folio = str(row[2] or '').strip() if len(row) > 2 else ''
+                    fecha = row[7] if len(row) > 7 else ''
+                    total = float(row[29]) if len(row) > 29 and row[29] else 0
+                    iva = float(row[13]) if len(row) > 13 and row[13] else 0
+                    grupo = str(row[31] or '').strip() if len(row) > 31 else ''
+
+                    if not total or not folio:
+                        continue
+
+                    base = round(total - iva, 2)
+                    doc = {
+                        'folio': folio,
+                        'fecha': fecha,
+                        'nit': nit_emisor if grupo == 'Recibido' else nit_receptor,
+                        'nombre': nombre_emisor if grupo == 'Recibido' else nombre_receptor,
+                        'total': total,
+                        'iva': iva
+                    }
+
+                    # Clasificar
+                    if grupo == 'Recibido':
+                        planos_data['compras'].append(doc)
+                    elif grupo == 'Emitido':
+                        planos_data['ventas'].append(doc)
+
+        # Generar reporte de retenciones
+        output_stream = generar_reporte_retenciones_excel(planos_data)
 
         original_name = file.filename.rsplit('.', 1)[0]
         download_name = f"RETENCIONES_{original_name}.xlsx"
