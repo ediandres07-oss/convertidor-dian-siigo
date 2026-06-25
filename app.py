@@ -21,6 +21,16 @@ app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 def index():
     return render_template('app.html')
 
+
+@app.route('/api/test-validar', methods=['POST'])
+def test_validar():
+    """Test simple de validación"""
+    return jsonify({
+        'status': 'ok',
+        'mensaje': 'Test funcionando',
+        'timestamp': str(datetime.now())
+    }), 200
+
 @app.route('/legacy')
 def legacy_index():
     return render_template('index.html')

@@ -1497,20 +1497,44 @@
         // ===== LIQUIDACIONES =====
         async function validarLiquidacion() {
             const file = document.getElementById('liq-archivo').files[0];
-            if (!file) { showMsg('❌ Selecciona un archivo', 'err'); return; }
-            const fd = new FormData(); fd.append('file', file);
-            showMsg('⏳ Validando...', 'info');
+            if (!file) {
+                alert('Selecciona un archivo primero');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('file', file);
+
             try {
-                const r = await fetch('/api/validar-liquidacion', {method: 'POST', body: fd});
-                const d = await r.json();
-                if (d.valido) {
-                    showMsg('✅ ' + d.mensaje, 'ok');
+                console.log('Enviando archivo:', file.name);
+                const response = await fetch('/api/validar-liquidacion', {
+                    method: 'POST',
+                    body: fd
+                });
+
+                console.log('Status:', response.status);
+                console.log('Headers:', response.headers);
+
+                const text = await response.text();
+                console.log('Response text:', text);
+
+                const data = JSON.parse(text);
+                console.log('Data parsed:', data);
+
+                if (data.valido) {
+                    document.getElementById('liq-mensaje').textContent = '✅ ' + data.mensaje;
+                    document.getElementById('liq-mensaje').style.display = 'block';
+                    document.getElementById('liq-mensaje').style.color = '#059669';
                 } else {
-                    showMsg('❌ ' + (d.error || 'Validación fallida'), 'err');
+                    document.getElementById('liq-mensaje').textContent = '❌ ' + (data.error || 'Error');
+                    document.getElementById('liq-mensaje').style.display = 'block';
+                    document.getElementById('liq-mensaje').style.color = '#dc2626';
                 }
             } catch(e) {
-                showMsg('❌ Error: ' + e.message, 'err');
-                console.error('validarLiquidacion:', e);
+                console.error('Error completo:', e);
+                document.getElementById('liq-mensaje').textContent = '❌ ' + e.toString();
+                document.getElementById('liq-mensaje').style.display = 'block';
+                document.getElementById('liq-mensaje').style.color = '#dc2626';
             }
         }
 
