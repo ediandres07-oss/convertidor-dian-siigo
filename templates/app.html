@@ -716,29 +716,175 @@
             document.body.classList.add('dark-mode');
         }
 
-        // Funciones placeholder
-        function convertirDIAN() {
-            console.log('Convertir DIAN');
+        // Funciones de API
+        async function convertirDIAN() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                showAlert('message-container', 'Selecciona un archivo', 'danger');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('archivo', file);
+            fd.append('consec_compras', document.getElementById('consec_compras').value);
+            fd.append('consec_nc', document.getElementById('consec_nc').value);
+            fd.append('consec_gastos', document.getElementById('consec_gastos').value);
+            fd.append('consec_ventas', document.getElementById('consec_ventas').value);
+
+            try {
+                const res = await fetch('/api/convert', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const blob = await res.blob();
+                downloadFile(blob, 'PLANOS.xlsx');
+                showAlert('message-container', '✅ Planos generados correctamente', 'success');
+            } catch (err) {
+                showAlert('message-container', `❌ ${err.message}`, 'danger');
+            }
         }
 
-        function liquidarIVA() {
-            console.log('Liquidar IVA');
+        async function liquidarIVA() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                showAlert('message-container', 'Selecciona un archivo', 'danger');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('archivo', file);
+
+            try {
+                const res = await fetch('/api/iva', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const blob = await res.blob();
+                downloadFile(blob, 'LIQUIDACION_IVA.xlsx');
+                showAlert('message-container', '✅ IVA liquidado correctamente', 'success');
+            } catch (err) {
+                showAlert('message-container', `❌ ${err.message}`, 'danger');
+            }
         }
 
-        function descargarDIAN() {
-            console.log('Descargar DIAN');
+        async function descargarDIAN() {
+            const user = document.getElementById('dian-user').value;
+            const pass = document.getElementById('dian-pass').value;
+
+            if (!user || !pass) {
+                showAlert('dian-message', 'Ingresa credenciales', 'danger');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/download-dian', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: user, password: pass })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    showAlert('dian-message', `⚠️ ${err.error}`, 'warning');
+                    return;
+                }
+
+                const blob = await res.blob();
+                downloadFile(blob, `Reporte_DIAN_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showAlert('dian-message', '✅ Reporte descargado', 'success');
+            } catch (err) {
+                showAlert('dian-message', `❌ ${err.message}`, 'danger');
+            }
         }
 
-        function generarBalance() {
-            console.log('Generar Balance');
+        async function generarBalance() {
+            const file = document.getElementById('balance-input').files[0];
+            if (!file) {
+                showAlert('balance-message', 'Selecciona archivo', 'danger');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('archivo', file);
+
+            try {
+                const res = await fetch('/api/balance', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const blob = await res.blob();
+                downloadFile(blob, 'BALANCE_PRUEBA.xlsx');
+                showAlert('balance-message', '✅ Balance generado', 'success');
+            } catch (err) {
+                showAlert('balance-message', `❌ ${err.message}`, 'danger');
+            }
         }
 
-        function generarNomina() {
-            console.log('Generar Nómina');
+        async function generarNomina() {
+            const file = document.getElementById('balance-nomina').files[0];
+            if (!file) {
+                showAlert('nomina-message', 'Selecciona archivo', 'danger');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('balance', file);
+            fd.append('consec_nomina', document.getElementById('consec_nomina').value);
+
+            try {
+                const res = await fetch('/api/nomina', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const blob = await res.blob();
+                downloadFile(blob, 'LIQUIDACIONES.zip');
+                showAlert('nomina-message', '✅ Liquidaciones generadas', 'success');
+            } catch (err) {
+                showAlert('nomina-message', `❌ ${err.message}`, 'danger');
+            }
         }
 
-        function subirSiigo() {
-            console.log('Subir Siigo');
+        async function subirSiigo() {
+            const user = document.getElementById('siigo-user').value;
+            const pass = document.getElementById('siigo-pass').value;
+
+            if (!user || !pass) {
+                showAlert('siigo-message', 'Ingresa credenciales', 'danger');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/upload-siigo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: user, password: pass })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Error subiendo');
+                }
+
+                const result = await res.json();
+                showAlert('siigo-message', `✅ ${result.mensaje}`, 'success');
+            } catch (err) {
+                showAlert('siigo-message', `❌ ${err.message}`, 'danger');
+            }
+        }
+
+        // Funciones auxiliares
+        function showAlert(elementId, message, type = 'success') {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `alert alert-${type} show`;
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function downloadFile(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
     </script>
 </body>
