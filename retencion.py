@@ -77,6 +77,7 @@ ACTIVIDADES_ECONOMICAS = {
 # Mapeo de NITs especiales con retenciones específicas
 NITS_ESPECIALES = {
     # 'NIT': {'concepto': 'servicios_software_licenciamiento', 'tasa': 3.5}
+}
 
 # Mapeo de tipos de operación a conceptos DIAN 2026
 TIPOS_OPERACION_DIAN = {
@@ -113,7 +114,6 @@ TIPOS_OPERACION_DIAN = {
     # OTROS
     'Intereses Financieros': 'intereses_financieros',
     'Construcción y Urbanización': 'construccion_urbanizacion',
-}
 }
 
 def obtener_concepto_por_tipo(tipo_documento, es_declarante=True):
