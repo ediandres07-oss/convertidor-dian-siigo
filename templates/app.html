@@ -1540,42 +1540,118 @@
 
         async function cargarEmpleados() {
             const file = document.getElementById('liq-archivo').files[0];
-            if (!file) { showMsg('❌ Selecciona archivo', 'err'); return; }
-            const fd = new FormData(); fd.append('file', file);
+            if (!file) {
+                alert('Carga un archivo primero');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('file', file);
+
             try {
+                console.log('Cargando empleados...');
                 const r = await fetch('/api/listar-empleados-liquidar', {method: 'POST', body: fd});
+                console.log('Status:', r.status);
+
                 const d = await r.json();
-                if (d.empleados) {
+                console.log('Empleados:', d);
+
+                if (d.empleados && d.empleados.length > 0) {
                     const lista = document.getElementById('liq-lista-empleados');
                     lista.innerHTML = '';
-                    d.empleados.forEach(e => {
+
+                    d.empleados.forEach((e, idx) => {
                         const div = document.createElement('div');
-                        div.style.padding = '8px'; div.style.borderBottom = '1px solid var(--border)'; div.style.display = 'flex'; div.style.justifyContent = 'space-between';
-                        div.innerHTML = `<div><strong>${e.nombre}</strong><br><small>${e.documento}</small></div><button class="btn btn-primary" onclick="download(${e.id}, '${e.nombre}')" style="padding: 4px 12px; font-size: 12px;">⬇️</button>`;
+                        div.style.padding = '10px';
+                        div.style.borderBottom = '1px solid #ddd';
+                        div.style.display = 'flex';
+                        div.style.justifyContent = 'space-between';
+                        div.style.alignItems = 'center';
+
+                        const nombre = e.nombre || 'Sin nombre';
+                        const doc = e.documento || 'Sin doc';
+
+                        div.innerHTML = `
+                            <div><strong>${nombre}</strong><br><small>${doc}</small></div>
+                            <button onclick="descargarPDF(${idx}, '${nombre}')" style="padding: 8px 12px; background: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer;">⬇️ PDF</button>
+                        `;
                         lista.appendChild(div);
                     });
+
                     document.getElementById('liq-empleados').style.display = 'block';
-                    showMsg('✅ ' + d.empleados.length + ' empleados', 'ok');
-                } else showMsg('❌ ' + d.error, 'err');
-            } catch(e) { showMsg('❌ ' + e.message, 'err'); }
+                    const msg = document.getElementById('liq-mensaje');
+                    msg.textContent = '✅ ' + d.empleados.length + ' empleados cargados';
+                    msg.style.display = 'block';
+                    msg.style.color = '#059669';
+                } else {
+                    const msg = document.getElementById('liq-mensaje');
+                    msg.textContent = '❌ ' + (d.error || 'No se encontraron empleados');
+                    msg.style.display = 'block';
+                    msg.style.color = '#dc2626';
+                }
+            } catch(e) {
+                console.error('Error:', e);
+                const msg = document.getElementById('liq-mensaje');
+                msg.textContent = '❌ Error: ' + e.message;
+                msg.style.display = 'block';
+                msg.style.color = '#dc2626';
+            }
         }
 
-        async function download(id, name) {
+        async function descargarPDF(idx, nombre) {
             const file = document.getElementById('liq-archivo').files[0];
+            if (!file) {
+                alert('Carga un archivo primero');
+                return;
+            }
+
             const emp = document.getElementById('liq-empresa').value || 'Empresa';
             const nit = document.getElementById('liq-nit').value || '';
-            const fd = new FormData(); fd.append('file', file); fd.append('empresa_nombre', emp); fd.append('empresa_nit', nit);
+
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('empresa_nombre', emp);
+            fd.append('empresa_nit', nit);
+
             try {
-                const r = await fetch(`/api/descargar-liquidacion/${id}`, {method: 'POST', body: fd});
+                console.log('Descargando PDF:', idx, nombre);
+                const r = await fetch(`/api/descargar-liquidacion/${idx}`, {
+                    method: 'POST',
+                    body: fd
+                });
+
+                console.log('Status:', r.status);
+
                 if (r.ok) {
                     const blob = await r.blob();
+                    console.log('Blob size:', blob.size);
+
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url; a.download = 'Liquidacion_' + name.replace(/ /g, '_') + '.pdf';
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    showMsg('✅ PDF descargado', 'ok');
+                    a.href = url;
+                    a.download = 'Liquidacion_' + nombre.replace(/ /g, '_') + '.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    const msg = document.getElementById('liq-mensaje');
+                    msg.textContent = '✅ PDF descargado: ' + nombre;
+                    msg.style.display = 'block';
+                    msg.style.color = '#059669';
+                } else {
+                    const msg = document.getElementById('liq-mensaje');
+                    msg.textContent = '❌ Error al descargar (HTTP ' + r.status + ')';
+                    msg.style.display = 'block';
+                    msg.style.color = '#dc2626';
                 }
-            } catch(e) { showMsg('❌ ' + e.message, 'err'); }
+            } catch(e) {
+                console.error('Error:', e);
+                const msg = document.getElementById('liq-mensaje');
+                msg.textContent = '❌ Error: ' + e.message;
+                msg.style.display = 'block';
+                msg.style.color = '#dc2626';
+            }
         }
 
         async function descargarTodosPDF() {
