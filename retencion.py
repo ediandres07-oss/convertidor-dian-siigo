@@ -77,6 +77,43 @@ ACTIVIDADES_ECONOMICAS = {
 # Mapeo de NITs especiales con retenciones específicas
 NITS_ESPECIALES = {
     # 'NIT': {'concepto': 'servicios_software_licenciamiento', 'tasa': 3.5}
+
+# Mapeo de tipos de operación a conceptos DIAN 2026
+TIPOS_OPERACION_DIAN = {
+    # COMPRAS
+    'Compras Generales (Declarantes)': 'compras_generales_declarantes',
+    'Compras Generales (No Declarantes)': 'compras_generales_no_declarantes',
+    'Compras con Tarjeta Débito/Crédito': 'compras_tarjeta_debito_credito',
+    'Compras Agrícolas sin Procesamiento': 'compras_agricolas_sin_procesamiento',
+    'Compras Café Pergamino': 'compras_cafe_pergamino',
+    'Compras Combustibles': 'compras_combustibles',
+    'Compras Vehículos': 'compras_vehiculos',
+    'Compras Oro': 'compras_oro',
+    'Compras Bienes Raíces Vivienda': 'compras_bienes_raices_vivienda_hasta_10000uvt',
+
+    # SERVICIOS
+    'Servicios Generales (Declarantes)': 'servicios_generales_declarantes',
+    'Servicios Generales (No Declarantes)': 'servicios_generales_no_declarantes',
+    'Servicios Transporte Carga': 'servicios_transporte_carga',
+    'Servicios Transporte Pasajeros': 'servicios_transporte_pasajeros_terrestre',
+    'Servicios Temporales': 'servicios_temporales_aiu',
+    'Servicios Vigilancia y Aseo': 'servicios_vigilancia_aseo_aiu',
+    'Servicios Salud': 'servicios_salud_ips',
+    'Servicios Hoteles y Restaurantes': 'servicios_hoteles_restaurantes',
+    'Servicios Software/Licenciamiento': 'servicios_software_licenciamiento',
+
+    # ARRENDAMIENTO
+    'Arrendamiento Muebles': 'arrendamiento_muebles',
+    'Arrendamiento Inmuebles (Declarantes)': 'arrendamiento_inmuebles_declarantes',
+    'Arrendamiento Inmuebles (No Declarantes)': 'arrendamiento_inmuebles_no_declarantes',
+
+    # HONORARIOS
+    'Honorarios y Comisiones': 'honorarios_comisiones_naturales',
+
+    # OTROS
+    'Intereses Financieros': 'intereses_financieros',
+    'Construcción y Urbanización': 'construccion_urbanizacion',
+}
 }
 
 def obtener_concepto_por_tipo(tipo_documento, es_declarante=True):
