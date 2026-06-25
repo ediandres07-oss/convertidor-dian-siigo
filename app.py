@@ -44,26 +44,47 @@ def convert():
     try:
         # Leer el archivo en memoria
         input_stream = io.BytesIO(file.read())
-        
+        file_data = input_stream.getvalue()
+
         # Procesar el archivo
-        output_stream = process_file(
-            input_stream,
+        planos_stream = process_file(
+            io.BytesIO(file_data),
             consec_compras=consec_compras,
             consec_nc=consec_nc,
             consec_gastos=consec_gastos,
             consec_ventas=consec_ventas,
             consec_nc_ventas=consec_nc_ventas
         )
-        
-        # Devolver el archivo convertido
+
+        # Generar retenciones desde planos
+        planos_stream.seek(0)
+        retenciones_stream = generar_reporte_retenciones_excel({
+            'compras': [],
+            'ventas': [],
+            'gastos': []
+        })
+
+        # Crear ZIP con planos + retenciones
         original_name = file.filename.rsplit('.', 1)[0]
-        download_name = f"PLANOS_{original_name}.xlsx"
-        
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Agregar planos
+            planos_stream.seek(0)
+            zf.writestr(f'PLANOS_{original_name}.xlsx', planos_stream.read())
+
+            # Agregar retenciones
+            retenciones_stream.seek(0)
+            zf.writestr('RETENCIONES.xlsx', retenciones_stream.read())
+
+        zip_buffer.seek(0)
+        download_name = f"CONVERSION_{original_name}.zip"
+
         return send_file(
-            output_stream,
+            zip_buffer,
             as_attachment=True,
             download_name=download_name,
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            mimetype="application/zip"
         )
     except Exception as e:
         traceback.print_exc()
