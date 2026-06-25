@@ -12,6 +12,7 @@ from retencion import calcular_retencion, generar_reporte_retenciones_excel
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
+# v1.5
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 
