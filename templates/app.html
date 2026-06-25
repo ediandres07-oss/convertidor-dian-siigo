@@ -402,7 +402,53 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-    </style>
+    
+        .sidebar.collapsed {
+            width: 60px;
+            padding: 10px;
+        }
+
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .menu-link span {
+            display: none;
+        }
+
+        .sidebar.collapsed .menu-link {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .logo-icon {
+            font-size: 24px;
+        }
+
+        .toggle-sidebar {
+            position: fixed;
+            top: 20px;
+            left: 200px;
+            z-index: 1000;
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: left 0.3s;
+        }
+
+        .sidebar.collapsed ~ .toggle-sidebar {
+            left: 70px;
+        }
+
+        .content {
+            transition: margin-left 0.3s;
+        }
+
+        .sidebar.collapsed ~ .content {
+            margin-left: 60px;
+        }
+
+        </style>
 </head>
 <body>
     <!-- SIDEBAR -->
@@ -454,6 +500,10 @@
             </li>
         </ul>
     </aside>
+
+        <!-- TOGGLE SIDEBAR -->
+        <button class="toggle-sidebar" onclick="toggleSidebar()">☰</button>
+
 
     <!-- MAIN CONTENT -->
     <div class="main">
@@ -1524,7 +1574,30 @@
             div.style.color = type === 'ok' ? '#059669' : type === 'err' ? '#dc2626' : '#2980b9';
         }
 
-</script>
+
+        // Toggle sidebar visibility
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                localStorage.setItem('sidebar-collapsed', 'false');
+            } else {
+                sidebar.classList.add('collapsed');
+                localStorage.setItem('sidebar-collapsed', 'true');
+            }
+        }
+
+        // Restaurar estado del sidebar al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+            if (isCollapsed) {
+                document.querySelector('.sidebar').classList.add('collapsed');
+            }
+        });
+
+        </script>
 
         <!-- LIQUIDACIONES NUEVA -->
         <div class="section" id="liquidacion" style="display: block; margin-left: 50px; padding-left: 30px;">
