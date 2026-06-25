@@ -443,3 +443,208 @@ def calcular_retenciones():
         return resultado
     except Exception as e:
         return {'error': str(e)}, 400
+
+
+# ===== LIQUIDACIONES MEJORADAS =====
+
+@app.route('/api/validar-liquidacion', methods=['POST'])
+def validar_liquidacion():
+    """Valida el Excel de liquidación sin procesar"""
+    try:
+        if 'file' not in request.files:
+            return {'error': 'No file uploaded'}, 400
+        
+        file = request.files['file']
+        if not file or file.filename == '':
+            return {'error': 'No file selected'}, 400
+        
+        input_stream = io.BytesIO(file.read())
+        wb = openpyxl.load_workbook(input_stream)
+        
+        # Validar hojas requeridas
+        required_sheets = ['Empleados', 'Parametros', 'Novedades']
+        missing_sheets = [s for s in required_sheets if s not in wb.sheetnames]
+        
+        if missing_sheets:
+            return {'error': f'Faltan hojas: {", ".join(missing_sheets)}'}, 400
+        
+        # Validar Empleados
+        ws_emp = wb['Empleados']
+        empleados_count = ws_emp.max_row - 1
+        if empleados_count < 1:
+            return {'error': 'Hoja Empleados vacía'}, 400
+        
+        # Validar columnas requeridas
+        required_cols = ['nombre', 'documento', 'salario_mensual', 'dias_laborados']
+        headers = [cell.value for cell in ws_emp[1]]
+        missing_cols = [c for c in required_cols if c not in headers]
+        
+        if missing_cols:
+            return {'error': f'Faltan columnas: {", ".join(missing_cols)}'}, 400
+        
+        # Validar Parametros
+        ws_param = wb['Parametros']
+        if ws_param.max_row < 3:
+            return {'error': 'Parámetros incompletos'}, 400
+        
+        return {
+            'valido': True,
+            'empleados_count': empleados_count,
+            'mensaje': f'✅ Excel válido con {empleados_count} empleados'
+        }, 200
+    
+    except Exception as e:
+        return {'error': f'Error validando: {str(e)}'}, 400
+
+
+@app.route('/api/previsualizar-liquidacion/<int>/<nombre>', methods=['POST'])
+def previsualizar_liquidacion(index, nombre):
+    """Previsualiza PDF de un empleado específico"""
+    try:
+        if 'file' not in request.files:
+            return {'error': 'No file uploaded'}, 400
+        
+        file = request.files['file']
+        input_stream = io.BytesIO(file.read())
+        wb = openpyxl.load_workbook(input_stream)
+        
+        ws_emp = wb['Empleados']
+        
+        # Obtener datos del empleado en la fila especificada
+        row = index + 2  # +2 porque row 1 es header, índice es 0-based
+        if row > ws_emp.max_row:
+            return {'error': f'Empleado {index} no existe'}, 400
+        
+        nombre_emp = ws_emp.cell(row, 1).value
+        documento = ws_emp.cell(row, 2).value
+        salario = ws_emp.cell(row, 3).value
+        dias = ws_emp.cell(row, 4).value
+        cesantias = ws_emp.cell(row, 5).value or 0
+        vacaciones = ws_emp.cell(row, 6).value or 0
+        
+        # Obtener parámetros
+        ws_param = wb['Parametros']
+        params = {}
+        for i in range(2, ws_param.max_row + 1):
+            param_name = ws_param.cell(i, 1).value
+            param_value = ws_param.cell(i, 2).value
+            if param_name:
+                params[param_name] = param_value
+        
+        # Generar datos de liquidación
+        datos_emp = {
+            'nombre': nombre_emp,
+            'documento': documento,
+            'salario_mensual': salario,
+            'dias_laborados': dias
+        }
+        
+        datos_liq = {
+            'cesantias': cesantias,
+            'vacaciones': vacaciones,
+            'salario_basico': salario * dias / 30
+        }
+        
+        # Generar PDF
+        empresa_data = {
+            'nombre': request.json.get('empresa_nombre', 'Mi Empresa') if request.is_json else 'Mi Empresa',
+            'nit': request.json.get('empresa_nit', '') if request.is_json else ''
+        }
+        
+        pdf_stream = generar_liquidacion_pdf_premium(datos_emp, datos_liq, None, empresa_data)
+        
+        return send_file(
+            pdf_stream,
+            as_attachment=True,
+            download_name=f'Preview_Liquidacion_{nombre}.pdf',
+            mimetype='application/pdf'
+        )
+    
+    except Exception as e:
+        return {'error': f'Error en previsualización: {str(e)}'}, 500
+
+
+@app.route('/api/generar-liquidaciones-lote', methods=['POST'])
+def generar_liquidaciones_lote():
+    """Genera liquidaciones para todos los empleados en un ZIP"""
+    try:
+        if 'file' not in request.files:
+            return {'error': 'No file uploaded'}, 400
+        
+        file = request.files['file']
+        input_stream = io.BytesIO(file.read())
+        wb = openpyxl.load_workbook(input_stream)
+        
+        ws_emp = wb['Empleados']
+        ws_param = wb['Parametros']
+        
+        # Obtener parámetros
+        params = {}
+        for i in range(2, ws_param.max_row + 1):
+            param_name = ws_param.cell(i, 1).value
+            param_value = ws_param.cell(i, 2).value
+            if param_name:
+                params[param_name] = param_value
+        
+        # Datos de empresa
+        empresa_data = {
+            'nombre': request.form.get('empresa_nombre', 'Mi Empresa'),
+            'nit': request.form.get('empresa_nit', '')
+        }
+        
+        # Crear ZIP con PDFs
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            
+            pdf_count = 0
+            for row in range(2, ws_emp.max_row + 1):
+                nombre = ws_emp.cell(row, 1).value
+                documento = ws_emp.cell(row, 2).value
+                salario = ws_emp.cell(row, 3).value
+                dias = ws_emp.cell(row, 4).value
+                cesantias = ws_emp.cell(row, 5).value or 0
+                vacaciones = ws_emp.cell(row, 6).value or 0
+                
+                if not nombre:
+                    continue
+                
+                datos_emp = {
+                    'nombre': nombre,
+                    'documento': documento,
+                    'salario_mensual': salario,
+                    'dias_laborados': dias
+                }
+                
+                datos_liq = {
+                    'cesantias': cesantias,
+                    'vacaciones': vacaciones,
+                    'salario_basico': salario * dias / 30 if salario and dias else 0
+                }
+                
+                try:
+                    pdf_stream = generar_liquidacion_pdf_premium(
+                        datos_emp, datos_liq, None, empresa_data
+                    )
+                    zip_file.writestr(
+                        f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
+                        pdf_stream.read()
+                    )
+                    pdf_count += 1
+                except Exception as e:
+                    print(f"Error generando PDF para {nombre}: {e}")
+                    continue
+        
+        if pdf_count == 0:
+            return {'error': 'No se generaron liquidaciones'}, 400
+        
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name='Liquidaciones.zip',
+            mimetype='application/zip'
+        )
+    
+    except Exception as e:
+        return {'error': f'Error generando lote: {str(e)}'}, 500
+
