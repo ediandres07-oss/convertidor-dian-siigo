@@ -3,7 +3,6 @@ from flask import Flask, request, send_file, render_template, jsonify
 import io
 import json
 import traceback
-import zipfile
 from datetime import datetime
 from converter import process_file, process_liquidacion_iva, _cargar_nomina_balance, convert_nomina, generate_balance_prueba, generate_liquidaciones
 from siigo_integration import subir_planos_a_siigo
@@ -56,7 +55,6 @@ def convert():
             consec_nc_ventas=consec_nc_ventas
         )
 
-        # Devolver el archivo convertido (sin ZIP, para evitar corrupción)
         original_name = file.filename.rsplit('.', 1)[0]
         download_name = f"PLANOS_{original_name}.xlsx"
 

@@ -962,7 +962,7 @@
                 if (!res.ok) throw new Error(`Error ${res.status}`);
 
                 const blob = await res.blob();
-                downloadFile(blob, 'LIQUIDACIONES.zip');
+                // Removed ZIP download
                 showAlert('nomina-message', '✅ Liquidaciones generadas. Descargando...', 'success');
             } catch (err) {
                 showAlert('nomina-message', `❌ ${err.message}`, 'danger');
