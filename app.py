@@ -358,44 +358,29 @@ def validar_liquidacion():
     try:
         if 'file' not in request.files:
             return {'error': 'No file uploaded'}, 400
-        
+
         file = request.files['file']
         if not file or file.filename == '':
             return {'error': 'No file selected'}, 400
-        
+
         input_stream = io.BytesIO(file.read())
         wb = openpyxl.load_workbook(input_stream)
-        
-        # Validar hojas requeridas
-        required_sheets = ['Empleados', 'Parametros', 'Novedades']
-        missing_sheets = [s for s in required_sheets if s not in wb.sheetnames]
-        
-        if missing_sheets:
-            return {'error': f'Faltan hojas: {", ".join(missing_sheets)}'}, 400
-        
-        # Validar Empleados
-        ws_emp = wb['Empleados']
-        empleados_count = ws_emp.max_row - 1
-        if empleados_count < 1:
-            return {'error': 'Hoja Empleados vacía'}, 400
-        
-        # Validar columnas requeridas
-        required_cols = ['nombre', 'documento', 'salario_mensual', 'dias_laborados']
-        headers = [cell.value for cell in ws_emp[1]]
-        missing_cols = [c for c in required_cols if c not in headers]
-        
-        if missing_cols:
-            return {'error': f'Faltan columnas: {", ".join(missing_cols)}'}, 400
-        
-        # Validar Parametros
-        ws_param = wb['Parametros']
-        if ws_param.max_row < 3:
-            return {'error': 'Parámetros incompletos'}, 400
-        
+
+        # Validación flexible: solo verificar que el archivo sea válido y tenga datos
+        if not wb.sheetnames:
+            return {'error': 'El archivo Excel no tiene hojas'}, 400
+
+        # Contar filas en la primera hoja
+        ws = wb.active
+        if ws.max_row < 2:
+            return {'error': 'El archivo está vacío o solo tiene encabezados'}, 400
+
+        empleados_count = ws.max_row - 1
+
         return {
             'valido': True,
             'empleados_count': empleados_count,
-            'mensaje': f'✅ Excel válido con {empleados_count} empleados'
+            'mensaje': f'✅ Excel válido con {empleados_count} registros'
         }, 200
     
     except Exception as e:
