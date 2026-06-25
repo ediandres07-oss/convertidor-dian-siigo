@@ -672,9 +672,39 @@
                     <div class="form-group">
                         <label>Tipo de Operación</label>
                         <select id="ret-tipo" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--text);">
-                            <option value="ventas">📈 Ventas (Autoretención 1.20%)</option>
-                            <option value="compras">📦 Compras (2.5%)</option>
-                            <option value="gastos">💼 Gastos (2.5%)</option>
+                            <option value="">-- Selecciona tipo de operación --</option>
+                            <optgroup label="COMPRAS">
+                                <option value="Compras Generales (Declarantes)">Compras Generales - Declarantes (2.5%)</option>
+                                <option value="Compras Generales (No Declarantes)">Compras Generales - No Declarantes (3.5%)</option>
+                                <option value="Compras con Tarjeta Débito/Crédito">Compras con Tarjeta (1.5%)</option>
+                                <option value="Compras Agrícolas sin Procesamiento">Compras Agrícolas (1.5%)</option>
+                                <option value="Compras Café Pergamino">Compras Café Pergamino (0.5%)</option>
+                                <option value="Compras Combustibles">Compras Combustibles (0.1%)</option>
+                                <option value="Compras Vehículos">Compras Vehículos (1.0%)</option>
+                                <option value="Compras Oro">Compras Oro (2.5%)</option>
+                                <option value="Compras Bienes Raíces Vivienda">Compras Bienes Raíces Vivienda (1.0%)</option>
+                            </optgroup>
+                            <optgroup label="SERVICIOS">
+                                <option value="Servicios Generales (Declarantes)">Servicios Generales - Declarantes (4.0%)</option>
+                                <option value="Servicios Generales (No Declarantes)">Servicios Generales - No Declarantes (6.0%)</option>
+                                <option value="Servicios Transporte Carga">Servicios Transporte Carga (1.0%)</option>
+                                <option value="Servicios Transporte Pasajeros">Servicios Transporte Pasajeros (3.5%)</option>
+                                <option value="Servicios Temporales">Servicios Temporales (1.0%)</option>
+                                <option value="Servicios Vigilancia y Aseo">Servicios Vigilancia y Aseo (2.0%)</option>
+                                <option value="Servicios Salud">Servicios Salud (2.0%)</option>
+                                <option value="Servicios Hoteles y Restaurantes">Servicios Hoteles y Restaurantes (3.5%)</option>
+                                <option value="Servicios Software/Licenciamiento">Servicios Software/Licenciamiento (3.5%)</option>
+                            </optgroup>
+                            <optgroup label="ARRENDAMIENTO">
+                                <option value="Arrendamiento Muebles">Arrendamiento Muebles (4.0%)</option>
+                                <option value="Arrendamiento Inmuebles (Declarantes)">Arrendamiento Inmuebles - Declarantes (3.5%)</option>
+                                <option value="Arrendamiento Inmuebles (No Declarantes)">Arrendamiento Inmuebles - No Declarantes (3.5%)</option>
+                            </optgroup>
+                            <optgroup label="OTROS">
+                                <option value="Honorarios y Comisiones">Honorarios y Comisiones (10%-11%)</option>
+                                <option value="Intereses Financieros">Intereses Financieros (7.0%)</option>
+                                <option value="Construcción y Urbanización">Construcción y Urbanización (2.0%)</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>
