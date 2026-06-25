@@ -733,6 +733,7 @@
             fd.append('consec_nc_ventas', '1');
 
             try {
+                showAlert('message-container', '⏳ Procesando archivo... esto puede tardar varios minutos (archivos grandes)', 'warning');
                 const res = await fetch('/api/convert', { method: 'POST', body: fd });
                 if (!res.ok) {
                     const text = await res.text();
@@ -741,7 +742,7 @@
 
                 const blob = await res.blob();
                 downloadFile(blob, 'PLANOS.xlsx');
-                showAlert('message-container', '✅ Planos generados correctamente', 'success');
+                showAlert('message-container', '✅ Planos generados correctamente. Descargando...', 'success');
             } catch (err) {
                 showAlert('message-container', `❌ ${err.message}`, 'danger');
             }
@@ -758,6 +759,7 @@
             fd.append('file', file);
 
             try {
+                showAlert('message-container', '⏳ Liquidando IVA...', 'warning');
                 const res = await fetch('/api/liquidar-iva', { method: 'POST', body: fd });
                 if (!res.ok) throw new Error(`Error ${res.status}`);
 
@@ -779,6 +781,7 @@
             }
 
             try {
+                showAlert('dian-message', '⏳ Descargando de DIAN... por favor espera', 'warning');
                 const res = await fetch('/api/download-dian', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -810,6 +813,7 @@
             fd.append('archivo', file);
 
             try {
+                showAlert('balance-message', '⏳ Generando balance...', 'warning');
                 const res = await fetch('/api/balance', { method: 'POST', body: fd });
                 if (!res.ok) throw new Error(`Error ${res.status}`);
 
@@ -833,12 +837,13 @@
             fd.append('consec_nomina', document.getElementById('consec_nomina').value);
 
             try {
+                showAlert('nomina-message', '⏳ Generando liquidaciones... esto puede tardar unos minutos', 'warning');
                 const res = await fetch('/api/nomina', { method: 'POST', body: fd });
                 if (!res.ok) throw new Error(`Error ${res.status}`);
 
                 const blob = await res.blob();
                 downloadFile(blob, 'LIQUIDACIONES.zip');
-                showAlert('nomina-message', '✅ Liquidaciones generadas', 'success');
+                showAlert('nomina-message', '✅ Liquidaciones generadas. Descargando...', 'success');
             } catch (err) {
                 showAlert('nomina-message', `❌ ${err.message}`, 'danger');
             }
