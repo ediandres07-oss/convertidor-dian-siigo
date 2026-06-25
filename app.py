@@ -594,48 +594,55 @@ def generar_liquidaciones_lote():
         
         # Crear ZIP con PDFs
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        pdf_files = []
+        
+        pdf_count = 0
+        for row in range(2, ws_emp.max_row + 1):
+            nombre = ws_emp.cell(row, 1).value
+            documento = ws_emp.cell(row, 2).value
+            salario = ws_emp.cell(row, 3).value
+            dias = ws_emp.cell(row, 4).value
+            cesantias = ws_emp.cell(row, 5).value or 0
+            vacaciones = ws_emp.cell(row, 6).value or 0
             
-            pdf_count = 0
-            for row in range(2, ws_emp.max_row + 1):
-                nombre = ws_emp.cell(row, 1).value
-                documento = ws_emp.cell(row, 2).value
-                salario = ws_emp.cell(row, 3).value
-                dias = ws_emp.cell(row, 4).value
-                cesantias = ws_emp.cell(row, 5).value or 0
-                vacaciones = ws_emp.cell(row, 6).value or 0
-                
-                if not nombre:
-                    continue
-                
-                datos_emp = {
-                    'nombre': nombre,
-                    'documento': documento,
-                    'salario_mensual': salario,
-                    'dias_laborados': dias
-                }
-                
-                datos_liq = {
-                    'cesantias': cesantias,
-                    'vacaciones': vacaciones,
-                    'salario_basico': salario * dias / 30 if salario and dias else 0
-                }
-                
-                try:
-                    pdf_stream = generar_liquidacion_pdf_premium(
-                        datos_emp, datos_liq, None, empresa_data
-                    )
-                    zip_file.writestr(
-                        f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
-                        pdf_stream.read()
-                    )
-                    pdf_count += 1
-                except Exception as e:
-                    print(f"Error generando PDF para {nombre}: {e}")
-                    continue
+            if not nombre:
+                continue
+            
+            datos_emp = {
+                'nombre': nombre,
+                'documento': documento,
+                'salario_mensual': salario,
+                'dias_laborados': dias
+            }
+            
+            datos_liq = {
+                'cesantias': cesantias,
+                'vacaciones': vacaciones,
+                'salario_basico': salario * dias / 30 if salario and dias else 0
+            }
+            
+            try:
+                pdf_stream = generar_liquidacion_pdf_premium(
+                    datos_emp, datos_liq, None, empresa_data
+                )
+                # Leer bytes del stream
+                pdf_bytes = pdf_stream.read()
+                pdf_files.append({
+                    'nombre': f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
+                    'contenido': pdf_bytes
+                })
+                pdf_count += 1
+            except Exception as e:
+                print(f"Error generando PDF para {nombre}: {e}")
+                continue
         
         if pdf_count == 0:
             return {'error': 'No se generaron liquidaciones'}, 400
+        
+        # Agregar todos los PDFs al ZIP
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
+            for pdf_file in pdf_files:
+                zip_file.writestr(pdf_file['nombre'], pdf_file['contenido'])
         
         zip_buffer.seek(0)
         return send_file(
