@@ -1,64 +1,69 @@
 """
 Módulo para cálculo de retenciones colombianas según tabla oficial DIAN 2026
 Tabla de tarifas de retención en la fuente - UVT 2026: $52.374
+Con validación de bases mínimas por concepto
 """
 
+# UVT 2026
+UVT_2026 = 52374
+
 # Tabla oficial de retenciones 2026 por concepto
+# Formato: 'concepto': {'tasa': %, 'base_uvt': UVT, 'base_minima': $}
 RETENCIONES_2026 = {
     # COMPRAS
-    'compras_generales_declarantes': 2.5,
-    'compras_generales_no_declarantes': 3.5,
-    'compras_tarjeta_debito_credito': 1.5,
-    'compras_agricolas_sin_procesamiento': 1.5,
-    'compras_agricolas_con_procesamiento_declarantes': 2.5,
-    'compras_agricolas_con_procesamiento_no_declarantes': 3.5,
-    'compras_cafe_pergamino': 0.5,
-    'compras_combustibles': 0.1,
-    'compras_vehiculos': 1.0,
-    'compras_oro': 2.5,
-    'compras_bienes_raices_vivienda_hasta_10000uvt': 1.0,
-    'compras_bienes_raices_vivienda_exceso': 2.5,
-    'compras_bienes_raices_otro_uso': 2.5,
+    'compras_generales_declarantes': {'tasa': 2.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'compras_generales_no_declarantes': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'compras_tarjeta_debito_credito': {'tasa': 1.5, 'base_uvt': 0, 'base_minima': 0},
+    'compras_agricolas_sin_procesamiento': {'tasa': 1.5, 'base_uvt': 92, 'base_minima': 4818000},
+    'compras_agricolas_con_procesamiento_declarantes': {'tasa': 2.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'compras_agricolas_con_procesamiento_no_declarantes': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'compras_cafe_pergamino': {'tasa': 0.5, 'base_uvt': 160, 'base_minima': 8380000},
+    'compras_combustibles': {'tasa': 0.1, 'base_uvt': 0, 'base_minima': 0},
+    'compras_vehiculos': {'tasa': 1.0, 'base_uvt': 0, 'base_minima': 0},
+    'compras_oro': {'tasa': 2.5, 'base_uvt': 0, 'base_minima': 0},
+    'compras_bienes_raices_vivienda_hasta_10000uvt': {'tasa': 1.0, 'base_uvt': 0, 'base_minima': 0},
+    'compras_bienes_raices_vivienda_exceso': {'tasa': 2.5, 'base_uvt': 20000, 'base_minima': 1047480000},
+    'compras_bienes_raices_otro_uso': {'tasa': 2.5, 'base_uvt': 0, 'base_minima': 0},
 
     # SERVICIOS
-    'servicios_generales_declarantes': 4.0,
-    'servicios_generales_no_declarantes': 6.0,
-    'servicios_transporte_carga': 1.0,
-    'servicios_transporte_pasajeros_terrestre': 3.5,
-    'servicios_transporte_pasajeros_aereo_maritimo': 1.0,
-    'servicios_temporales_aiu': 1.0,
-    'servicios_vigilancia_aseo_aiu': 2.0,
-    'servicios_salud_ips': 2.0,
-    'servicios_hoteles_restaurantes': 3.5,
-    'servicios_software_licenciamiento': 3.5,
+    'servicios_generales_declarantes': {'tasa': 4.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_generales_no_declarantes': {'tasa': 6.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_transporte_carga': {'tasa': 1.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_transporte_pasajeros_terrestre': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'servicios_transporte_pasajeros_aereo_maritimo': {'tasa': 1.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_temporales_aiu': {'tasa': 1.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_vigilancia_aseo_aiu': {'tasa': 2.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_salud_ips': {'tasa': 2.0, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_hoteles_restaurantes': {'tasa': 3.5, 'base_uvt': 4, 'base_minima': 209000},
+    'servicios_software_licenciamiento': {'tasa': 3.5, 'base_uvt': 0, 'base_minima': 0},
 
     # ARRENDAMIENTO
-    'arrendamiento_muebles': 4.0,
-    'arrendamiento_inmuebles_declarantes': 3.5,
-    'arrendamiento_inmuebles_no_declarantes': 3.5,
+    'arrendamiento_muebles': {'tasa': 4.0, 'base_uvt': 0, 'base_minima': 0},
+    'arrendamiento_inmuebles_declarantes': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'arrendamiento_inmuebles_no_declarantes': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
 
     # HONORARIOS Y COMISIONES
-    'honorarios_comisiones_juridicas': 11.0,
-    'honorarios_comisiones_naturales': 11.0,
-    'honorarios_comisiones_no_declarantes': 10.0,
+    'honorarios_comisiones_juridicas': {'tasa': 11.0, 'base_uvt': 0, 'base_minima': 0},
+    'honorarios_comisiones_naturales': {'tasa': 11.0, 'base_uvt': 0, 'base_minima': 0},
+    'honorarios_comisiones_no_declarantes': {'tasa': 10.0, 'base_uvt': 0, 'base_minima': 0},
 
     # INGRESOS TRIBUTARIOS
-    'otros_ingresos_declarantes': 2.5,
-    'otros_ingresos_no_declarantes': 3.5,
+    'otros_ingresos_declarantes': {'tasa': 2.5, 'base_uvt': 27, 'base_minima': 1414000},
+    'otros_ingresos_no_declarantes': {'tasa': 3.5, 'base_uvt': 27, 'base_minima': 1414000},
 
     # RENDIMIENTOS FINANCIEROS
-    'intereses_financieros': 7.0,
-    'rendimientos_renta_fija': 4.0,
+    'intereses_financieros': {'tasa': 7.0, 'base_uvt': 0, 'base_minima': 0},
+    'rendimientos_renta_fija': {'tasa': 4.0, 'base_uvt': 0, 'base_minima': 0},
 
     # RETENCIÓN IVA
-    'retencion_iva_servicios': 15.0,
-    'retencion_iva_compras': 15.0,
+    'retencion_iva_servicios': {'tasa': 15.0, 'base_uvt': 4, 'base_minima': 209000},
+    'retencion_iva_compras': {'tasa': 15.0, 'base_uvt': 27, 'base_minima': 1414000},
 
     # CONSTRUCCIÓN
-    'construccion_urbanizacion': 2.0,
+    'construccion_urbanizacion': {'tasa': 2.0, 'base_uvt': 27, 'base_minima': 1414000},
 
     # VENTAS (autoretención)
-    'ventas_autorretencion': 1.2,
+    'ventas_autorretencion': {'tasa': 1.2, 'base_uvt': 0, 'base_minima': 0},
 }
 
 # Mapeo de actividades económicas (CIIU)
@@ -74,16 +79,16 @@ NITS_ESPECIALES = {
     # 'NIT': {'concepto': 'servicios_software_licenciamiento', 'tasa': 3.5}
 }
 
-def obtener_tasa_por_tipo(tipo_documento, es_declarante=True):
+def obtener_concepto_por_tipo(tipo_documento, es_declarante=True):
     """
-    Obtiene la tasa de retención según el tipo de documento.
+    Obtiene el concepto de retención según el tipo de documento.
 
     Args:
         tipo_documento: Tipo de documento ('compras', 'servicios', 'honorarios', etc.)
         es_declarante: Si es declarante de renta (afecta tasa)
 
     Returns:
-        Tasa de retención en porcentaje
+        Concepto de retención (clave en RETENCIONES_2026)
     """
 
     tipo_lower = tipo_documento.lower().replace(' ', '_')
@@ -100,27 +105,28 @@ def obtener_tasa_por_tipo(tipo_documento, es_declarante=True):
 
     # Intentar encontrar mapeo exacto
     if tipo_lower in RETENCIONES_2026:
-        return RETENCIONES_2026[tipo_lower]
+        return tipo_lower
 
     # Intentar mapeo por palabra clave
     for clave, concepto in tipo_map.items():
         if clave in tipo_lower:
-            return RETENCIONES_2026.get(concepto, 2.5)
+            return concepto
 
     # Por defecto según tipo
     if 'compra' in tipo_lower:
-        return RETENCIONES_2026['compras_generales_declarantes']
+        return 'compras_generales_declarantes'
     elif 'venta' in tipo_lower:
-        return RETENCIONES_2026['ventas_autorretencion']
+        return 'ventas_autorretencion'
     elif 'servicio' in tipo_lower or 'software' in tipo_lower:
-        return RETENCIONES_2026['servicios_software_licenciamiento']
+        return 'servicios_software_licenciamiento'
 
     # Default: compras genéricas declarantes
-    return 2.5
+    return 'compras_generales_declarantes'
 
 def calcular_retencion(base_gravable, tipo_operacion='compras', nit_proveedor='', actividad='4631', es_declarante=True):
     """
     Calcula la retención aplicable según la operación.
+    Valida que la base sea superior a la base mínima del concepto.
 
     Args:
         base_gravable: Base sobre la cual se calcula
@@ -130,18 +136,27 @@ def calcular_retencion(base_gravable, tipo_operacion='compras', nit_proveedor=''
         es_declarante: Si es declarante de renta
 
     Returns:
-        dict con: base, tasa, valor_retencion
+        dict con: base, tasa, valor_retencion, aplica (bool), concepto
     """
 
-    # Buscar tasa especial por NIT
+    # Obtener concepto
     if nit_proveedor in NITS_ESPECIALES:
         concepto = NITS_ESPECIALES[nit_proveedor].get('concepto')
-        tasa = RETENCIONES_2026.get(concepto, obtener_tasa_por_tipo(tipo_operacion, es_declarante))
     else:
-        # Usar tasa según tipo de operación
-        tasa = obtener_tasa_por_tipo(tipo_operacion, es_declarante)
+        concepto = obtener_concepto_por_tipo(tipo_operacion, es_declarante)
 
-    valor_retencion = round(base_gravable * tasa / 100, 2)
+    # Obtener datos del concepto
+    concepto_data = RETENCIONES_2026.get(concepto, RETENCIONES_2026['compras_generales_declarantes'])
+    tasa = concepto_data['tasa']
+    base_minima = concepto_data['base_minima']
+
+    # Validar si aplica retención según base mínima
+    aplica = base_gravable >= base_minima if base_minima > 0 else True
+
+    if aplica:
+        valor_retencion = round(base_gravable * tasa / 100, 2)
+    else:
+        valor_retencion = 0
 
     return {
         'base': round(base_gravable, 2),
@@ -149,13 +164,16 @@ def calcular_retencion(base_gravable, tipo_operacion='compras', nit_proveedor=''
         'valor': valor_retencion,
         'tipo': tipo_operacion,
         'actividad': actividad,
-        'es_declarante': es_declarante
+        'es_declarante': es_declarante,
+        'concepto': concepto,
+        'base_minima': base_minima,
+        'aplica': aplica
     }
 
 def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declarante=True):
     """
     Genera reporte de retenciones a partir de datos de planos.
-    Utiliza tabla oficial 2026 DIAN.
+    Utiliza tabla oficial 2026 DIAN con validación de bases mínimas.
 
     Args:
         planos_data: Dict con datos de planos {'compras': [...], 'ventas': [...]}
@@ -177,7 +195,7 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
     ws.title = 'Retenciones'
 
     # Encabezados
-    headers = ['Tipo', 'Documento', 'Fecha', 'NIT', 'Tercero', 'Base Gravable', 'Tasa %', 'Valor Retención']
+    headers = ['Tipo', 'Documento', 'Fecha', 'NIT', 'Tercero', 'Base Gravable', 'Base Mín.', 'Tasa %', 'Aplica', 'Valor Retención']
 
     # Estilo encabezado
     header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
@@ -190,17 +208,19 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
         cell.alignment = Alignment(horizontal='center', vertical='center')
 
     # Ancho de columnas
-    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['A'].width = 10
     ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 12
     ws.column_dimensions['D'].width = 12
     ws.column_dimensions['E'].width = 20
     ws.column_dimensions['F'].width = 14
-    ws.column_dimensions['G'].width = 10
-    ws.column_dimensions['H'].width = 14
+    ws.column_dimensions['G'].width = 14
+    ws.column_dimensions['H'].width = 10
+    ws.column_dimensions['I'].width = 8
+    ws.column_dimensions['J'].width = 14
 
     row = 2
-    totales = {'base': 0, 'retencion': 0}
+    totales = {'base': 0, 'retencion': 0, 'excluidas': 0}
 
     # Procesar compras
     for doc in planos_data.get('compras', []):
@@ -213,11 +233,17 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
         ws.cell(row=row, column=4, value=doc.get('nit', ''))
         ws.cell(row=row, column=5, value=doc.get('nombre', ''))
         ws.cell(row=row, column=6, value=ret['base'])
-        ws.cell(row=row, column=7, value=ret['tasa'])
-        ws.cell(row=row, column=8, value=ret['valor'])
+        ws.cell(row=row, column=7, value=f"${ret['base_minima']:,.0f}" if ret['base_minima'] > 0 else "N/A")
+        ws.cell(row=row, column=8, value=ret['tasa'])
+        ws.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
+        ws.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
 
         totales['base'] += ret['base']
-        totales['retencion'] += ret['valor']
+        if ret['aplica']:
+            totales['retencion'] += ret['valor']
+        else:
+            totales['excluidas'] += ret['base']
+
         row += 1
 
     # Procesar ventas
@@ -231,11 +257,17 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
         ws.cell(row=row, column=4, value=doc.get('nit', ''))
         ws.cell(row=row, column=5, value=doc.get('nombre', ''))
         ws.cell(row=row, column=6, value=ret['base'])
-        ws.cell(row=row, column=7, value=ret['tasa'])
-        ws.cell(row=row, column=8, value=ret['valor'])
+        ws.cell(row=row, column=7, value=f"${ret['base_minima']:,.0f}" if ret['base_minima'] > 0 else "N/A")
+        ws.cell(row=row, column=8, value=ret['tasa'])
+        ws.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
+        ws.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
 
         totales['base'] += ret['base']
-        totales['retencion'] += ret['valor']
+        if ret['aplica']:
+            totales['retencion'] += ret['valor']
+        else:
+            totales['excluidas'] += ret['base']
+
         row += 1
 
     # Fila de totales
@@ -246,7 +278,11 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
     ws.cell(row=row, column=5, value='TOTAL').font = total_font
     ws.cell(row=row, column=6, value=totales['base']).font = total_font
     ws.cell(row=row, column=6).fill = total_fill
-    ws.cell(row=row, column=8, value=totales['retencion']).font = total_font
-    ws.cell(row=row, column=8).fill = total_fill
+    ws.cell(row=row, column=10, value=totales['retencion']).font = total_font
+    ws.cell(row=row, column=10).fill = total_fill
+
+    # Nota de excluidas
+    row += 2
+    ws.cell(row=row, column=5, value=f"Base excluida por mínimo: ${totales['excluidas']:,.2f}").font = Font(italic=True, size=9)
 
     return wb
