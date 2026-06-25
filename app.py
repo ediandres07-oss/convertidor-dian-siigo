@@ -96,7 +96,6 @@ def liquidar_iva():
         traceback.print_exc()
         return {'error': f'Error generando liquidación: {str(e)}'}, 500
 
-
 @app.route('/api/liquidar-retenciones', methods=['POST'])
 def liquidar_retenciones():
     if 'file' not in request.files:
@@ -177,7 +176,6 @@ def liquidar_retenciones():
         traceback.print_exc()
         return {'error': f'Error generando retenciones: {str(e)}'}, 500
 
-
 @app.route('/api/nomina', methods=['POST'])
 def nomina():
     if 'balance' not in request.files:
@@ -223,7 +221,6 @@ def nomina():
         traceback.print_exc()
         return {'error': f'Error generando nómina: {str(e)}'}, 500
 
-
 @app.route('/api/balance', methods=['POST'])
 def balance():
     if 'file' not in request.files:
@@ -245,95 +242,6 @@ def balance():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error generando balance: {str(e)}'}, 500
-
-
-@app.route('/api/liquidaciones', methods=['POST'])
-def liquidaciones():
-    try:
-        data = request.get_json()
-        if not data or 'empleados' not in data:
-            return {'error': 'No se proporcionaron datos de empleados'}, 400
-
-        empleados = data['empleados']
-        # Validar que al menos un empleado tenga nombre
-        if not any(emp.get('nombre', '').strip() for emp in empleados):
-            return {'error': 'Todos los empleados deben tener un nombre'}, 400
-
-        # Generar Excel
-        excel_stream = generate_liquidaciones(empleados)
-
-        # Crear ZIP con Excel + PDFs de liquidación
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Agregar Excel
-            excel_stream.seek(0)
-            zip_file.writestr('LIQUIDACIONES.xlsx', excel_stream.read())
-
-            # Generar PDF para cada empleado (versión premium)
-            for emp in empleados:
-                nombre = emp.get('nombre', 'Sin_nombre').replace(' ', '_')
-                try:
-                    # Estructura de datos para PDF
-                    datos_emp = {
-                        'nombre': emp.get('nombre', ''),
-                        'cedula': emp.get('cedula', ''),
-                        'cargo': emp.get('cargo', ''),
-                        'departamento': emp.get('departamento', ''),
-                        'salario': float(emp.get('salario', 0)),
-                        'fecha_inicio': emp.get('fecha_inicio', ''),
-                        'fecha_retiro': emp.get('fecha_retiro', ''),
-                        'dias_trabajados': emp.get('dias_trabajados', ''),
-                        'tipo_contrato': emp.get('tipo_contrato', 'Indefinido'),
-                        'metodo_pago': emp.get('metodo_pago', 'Transferencia Bancaria'),
-                        'banco': emp.get('banco', ''),
-                        'tipo_cuenta': emp.get('tipo_cuenta', ''),
-                        'numero_cuenta': emp.get('numero_cuenta', ''),
-                    }
-                    datos_liq = {
-                        'cesantias': float(emp.get('cesantias', 0)),
-                        'dias_cesantias': emp.get('dias_cesantias', ''),
-                        'vr_diario_cesantias': emp.get('vr_diario_cesantias', ''),
-                        'prima': float(emp.get('prima', 0)),
-                        'dias_prima': emp.get('dias_prima', ''),
-                        'vr_diario_prima': emp.get('vr_diario_prima', ''),
-                        'vacaciones': float(emp.get('vacaciones', 0)),
-                        'dias_vacaciones': emp.get('dias_vacaciones', ''),
-                        'vr_diario_vacaciones': emp.get('vr_diario_vacaciones', ''),
-                        'intereses_cesantias': float(emp.get('intereses', 0)),
-                        'aporte_pension': -float(emp.get('pension', 0)),
-                        'aporte_salud': -float(emp.get('salud', 0)),
-                        'aporte_solidaridad': -float(emp.get('solidaridad', 0)),
-                        'embargos': -float(emp.get('embargos', 0)),
-                        'otros_descuentos': -float(emp.get('otros_descuentos', 0))
-                    }
-
-                    # Datos de empresa
-                    empresa_data = {
-                        'nombre': emp.get('empresa', 'EMPRESA GIMÉNEZ ASOCIADOS'),
-                        'nit': emp.get('empresa_nit', ''),
-                        'representante': emp.get('representante_empresa', '')
-                    }
-
-                    # Logo (si existe)
-                    logo_path = emp.get('logo_path', None)
-
-                    pdf_stream = generar_liquidacion_pdf_premium(datos_emp, datos_liq, logo_path, empresa_data)
-                    pdf_stream.seek(0)
-                    zip_file.writestr(f'Liquidacion_{nombre}.pdf', pdf_stream.read())
-                except Exception as e:
-                    print(f"⚠️  Error generando PDF para {nombre}: {str(e)}")
-
-        zip_buffer.seek(0)
-        return send_file(
-            zip_buffer,
-            as_attachment=True,
-            download_name=f'LIQUIDACIONES_{datetime.now().strftime("%Y%m%d")}.zip',
-            mimetype='application/zip'
-        )
-    except Exception as e:
-        traceback.print_exc()
-        return {'error': f'Error generando liquidaciones: {str(e)}'}, 500
-
 
 @app.route('/api/download-dian', methods=['POST'])
 def download_dian():
@@ -370,7 +278,6 @@ def download_dian():
     except Exception as e:
         traceback.print_exc()
         return {'error': f'Error descargando: {str(e)}'}, 500
-
 
 @app.route('/api/upload-siigo', methods=['POST'])
 def upload_siigo():
@@ -424,12 +331,10 @@ def upload_siigo():
         traceback.print_exc()
         return {'error': f'Error: {str(e)}'}, 500
 
-
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=True, port=port, host='127.0.0.1')
-
 
 @app.route('/api/retenciones', methods=['POST'])
 def calcular_retenciones():
@@ -444,7 +349,6 @@ def calcular_retenciones():
         return resultado
     except Exception as e:
         return {'error': str(e)}, 400
-
 
 # ===== LIQUIDACIONES MEJORADAS =====
 
@@ -496,7 +400,6 @@ def validar_liquidacion():
     
     except Exception as e:
         return {'error': f'Error validando: {str(e)}'}, 400
-
 
 @app.route('/api/previsualizar-liquidacion/<int>/<nombre>', methods=['POST'])
 def previsualizar_liquidacion(index, nombre):
@@ -564,122 +467,6 @@ def previsualizar_liquidacion(index, nombre):
     except Exception as e:
         return {'error': f'Error en previsualización: {str(e)}'}, 500
 
-
-
-def generar_liquidaciones_lote():
-    """Genera liquidaciones para todos los empleados en un ZIP"""
-    try:
-        if 'file' not in request.files:
-            return {'error': 'No file uploaded'}, 400
-        
-        file = request.files['file']
-        input_stream = io.BytesIO(file.read())
-        wb = openpyxl.load_workbook(input_stream)
-        
-        ws_emp = wb['Empleados']
-        ws_param = wb['Parametros']
-        
-        # Obtener parámetros
-        params = {}
-        for i in range(2, ws_param.max_row + 1):
-            param_name = ws_param.cell(i, 1).value
-            param_value = ws_param.cell(i, 2).value
-            if param_name:
-                params[param_name] = param_value
-        
-        # Datos de empresa
-        empresa_data = {
-            'nombre': request.form.get('empresa_nombre', 'Mi Empresa'),
-            'nit': request.form.get('empresa_nit', '')
-        }
-        
-        # Crear ZIP con PDFs
-        zip_buffer = io.BytesIO()
-        pdf_files = []
-        
-        pdf_count = 0
-        for row in range(2, ws_emp.max_row + 1):
-            nombre = ws_emp.cell(row, 1).value
-            documento = ws_emp.cell(row, 2).value
-            salario = ws_emp.cell(row, 3).value
-            dias = ws_emp.cell(row, 4).value
-            cesantias = ws_emp.cell(row, 5).value or 0
-            vacaciones = ws_emp.cell(row, 6).value or 0
-            
-            if not nombre:
-                continue
-            
-            datos_emp = {
-                'nombre': nombre,
-                'documento': documento,
-                'salario_mensual': salario,
-                'dias_laborados': dias
-            }
-            
-            datos_liq = {
-                'cesantias': cesantias,
-                'vacaciones': vacaciones,
-                'salario_basico': salario * dias / 30 if salario and dias else 0
-            }
-            
-            try:
-                pdf_stream = generar_liquidacion_pdf_premium(
-                    datos_emp, datos_liq, None, empresa_data
-                )
-                # Asegurar que el stream está al inicio
-                if pdf_stream:
-                    pdf_stream.seek(0)
-                    pdf_bytes = pdf_stream.read()
-                    
-                    # Validar que hay contenido
-                    if pdf_bytes and len(pdf_bytes) > 0:
-                        pdf_files.append({
-                            'nombre': f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
-                            'contenido': pdf_bytes
-                        })
-                        pdf_count += 1
-                    else:
-                        print(f"Advertencia: PDF vacío para {nombre}")
-                else:
-                    print(f"Error: generar_liquidacion_pdf_premium retornó None para {nombre}")
-            except Exception as e:
-                print(f"Error generando PDF para {nombre}: {e}")
-                continue
-        
-        if pdf_count == 0:
-            return {'error': 'No se generaron liquidaciones'}, 400
-        
-        # Agregar todos los PDFs al ZIP
-        if len(pdf_files) > 0:
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
-                for pdf_file in pdf_files:
-                    if pdf_file['contenido']:
-                        zip_file.writestr(pdf_file['nombre'], pdf_file['contenido'])
-            
-            zip_buffer.seek(0)
-            
-            # Verificar tamaño del ZIP
-            zip_size = len(zip_buffer.getvalue())
-            if zip_size == 0:
-                return {'error': 'ZIP generado vacío'}, 400
-            
-            return send_file(
-                zip_buffer,
-                as_attachment=True,
-                download_name='Liquidaciones.zip',
-                mimetype='application/zip'
-            )
-        else:
-            return {'error': 'No se generaron PDFs válidos'}, 400
-    
-    except Exception as e:
-        return {'error': f'Error generando lote: {str(e)}'}, 500
-
-
-
-# ===== LIQUIDACIONES - DESCARGAS INDIVIDUALES =====
-
-@app.route('/api/listar-empleados-liquidar', methods=['POST'])
 def listar_empleados_liquidar():
     """Lista empleados para descargar PDFs individuales"""
     try:
@@ -708,7 +495,6 @@ def listar_empleados_liquidar():
     
     except Exception as e:
         return {'error': f'Error: {str(e)}'}, 400
-
 
 @app.route('/api/descargar-liquidacion/<int:emp_id>', methods=['POST'])
 def descargar_liquidacion(emp_id):
