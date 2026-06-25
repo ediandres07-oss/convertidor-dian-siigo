@@ -625,13 +625,22 @@ def generar_liquidaciones_lote():
                 pdf_stream = generar_liquidacion_pdf_premium(
                     datos_emp, datos_liq, None, empresa_data
                 )
-                # Leer bytes del stream
-                pdf_bytes = pdf_stream.read()
-                pdf_files.append({
-                    'nombre': f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
-                    'contenido': pdf_bytes
-                })
-                pdf_count += 1
+                # Asegurar que el stream está al inicio
+                if pdf_stream:
+                    pdf_stream.seek(0)
+                    pdf_bytes = pdf_stream.read()
+                    
+                    # Validar que hay contenido
+                    if pdf_bytes and len(pdf_bytes) > 0:
+                        pdf_files.append({
+                            'nombre': f'Liquidacion_{nombre.replace(" ", "_")}.pdf',
+                            'contenido': pdf_bytes
+                        })
+                        pdf_count += 1
+                    else:
+                        print(f"Advertencia: PDF vacío para {nombre}")
+                else:
+                    print(f"Error: generar_liquidacion_pdf_premium retornó None para {nombre}")
             except Exception as e:
                 print(f"Error generando PDF para {nombre}: {e}")
                 continue
@@ -640,17 +649,27 @@ def generar_liquidaciones_lote():
             return {'error': 'No se generaron liquidaciones'}, 400
         
         # Agregar todos los PDFs al ZIP
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
-            for pdf_file in pdf_files:
-                zip_file.writestr(pdf_file['nombre'], pdf_file['contenido'])
-        
-        zip_buffer.seek(0)
-        return send_file(
-            zip_buffer,
-            as_attachment=True,
-            download_name='Liquidaciones.zip',
-            mimetype='application/zip'
-        )
+        if len(pdf_files) > 0:
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
+                for pdf_file in pdf_files:
+                    if pdf_file['contenido']:
+                        zip_file.writestr(pdf_file['nombre'], pdf_file['contenido'])
+            
+            zip_buffer.seek(0)
+            
+            # Verificar tamaño del ZIP
+            zip_size = len(zip_buffer.getvalue())
+            if zip_size == 0:
+                return {'error': 'ZIP generado vacío'}, 400
+            
+            return send_file(
+                zip_buffer,
+                as_attachment=True,
+                download_name='Liquidaciones.zip',
+                mimetype='application/zip'
+            )
+        else:
+            return {'error': 'No se generaron PDFs válidos'}, 400
     
     except Exception as e:
         return {'error': f'Error generando lote: {str(e)}'}, 500
