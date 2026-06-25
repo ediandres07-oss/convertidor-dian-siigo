@@ -9,6 +9,7 @@ from siigo_integration import subir_planos_a_siigo
 from dian_integration import descargar_reporte_dian
 from liquidacion_pdf_premium import generar_liquidacion_pdf_premium
 from retencion import calcular_retencion, generar_reporte_retenciones_excel
+import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
