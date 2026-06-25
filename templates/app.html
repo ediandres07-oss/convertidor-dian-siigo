@@ -755,10 +755,10 @@
             }
 
             const fd = new FormData();
-            fd.append('archivo', file);
+            fd.append('file', file);
 
             try {
-                const res = await fetch('/api/iva', { method: 'POST', body: fd });
+                const res = await fetch('/api/liquidar-iva', { method: 'POST', body: fd });
                 if (!res.ok) throw new Error(`Error ${res.status}`);
 
                 const blob = await res.blob();
