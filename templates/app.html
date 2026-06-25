@@ -608,28 +608,6 @@
         </div>
 
         <!-- SECTION: LIQUIDACIÓN -->
-        <div id="liquidacion" class="section">
-            <h2 class="section-title">Liquidación Laboral</h2>
-
-            <div class="card">
-                <p style="margin-bottom: 16px; color: var(--text-light);">
-                    Crea liquidaciones de empleados en formato profesional
-                </p>
-
-                <input type="file" id="balance-nomina" accept=".xlsx,.xls" style="width: 100%; margin-bottom: 12px;">
-
-                <div class="form-group">
-                    <label>Consecutivo de Nómina</label>
-                    <input type="number" id="consec_nomina" value="1">
-                </div>
-
-                <button class="btn btn-primary" onclick="generarNomina()" style="width: 100%;">
-                    💼 Generar Liquidaciones
-                </button>
-
-                <div class="alert" id="nomina-message" style="margin-top: 16px;"></div>
-            </div>
-        </div>
 
         <!-- SECTION: SIIGO -->
         <div id="siigo" class="section">
@@ -1554,7 +1532,7 @@
 </script>
 
         <!-- LIQUIDACIONES -->
-        <div class="section" id="section-liquidaciones" style="display: none;">
+        <div class="section" id="liquidacion" style="display: none;">
             <div style="max-width: 800px; margin: 0 auto;">
                 <div style="background: rgba(41, 128, 185, 0.1); padding: 20px; border-radius: 8px;">
                     <h2 style="margin-bottom: 20px;">👷 Generar Liquidaciones</h2>
