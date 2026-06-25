@@ -1,7 +1,7 @@
 """
 Módulo para cálculo de retenciones colombianas según tabla oficial DIAN 2026
 Tabla de tarifas de retención en la fuente - UVT 2026: $52.374 COP
-Con validación de bases mínimas por concepto en pesos colombianos
+Con validación de bases mínimas por concepto
 """
 
 # UVT 2026 en Pesos Colombianos
@@ -174,6 +174,7 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
     """
     Genera reporte de retenciones a partir de datos de planos.
     Utiliza tabla oficial 2026 DIAN con validación de bases mínimas en COP.
+    Crea dos hojas: Detalle y Consolidadas
 
     Args:
         planos_data: Dict con datos de planos {'compras': [...], 'ventas': [...]}
@@ -186,13 +187,15 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
 
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+        from openpyxl.styles import Font, PatternFill, Alignment, numbers
     except ImportError:
         return None
 
     wb = Workbook()
-    ws = wb.active
-    ws.title = 'Retenciones'
+    
+    # ===== HOJA 1: DETALLE =====
+    ws_detalle = wb.active
+    ws_detalle.title = 'Detalle'
 
     # Encabezados
     headers = ['Tipo', 'Documento', 'Fecha', 'NIT', 'Tercero', 'Base Gravable (COP)', 'Base Mín. (COP)', 'Tasa %', 'Aplica', 'Valor Retención (COP)']
@@ -202,25 +205,25 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
     header_font = Font(bold=True, color='FFFFFF', size=11)
 
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
+        cell = ws_detalle.cell(row=1, column=col, value=header)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
     # Ancho de columnas
-    ws.column_dimensions['A'].width = 10
-    ws.column_dimensions['B'].width = 12
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 12
-    ws.column_dimensions['E'].width = 20
-    ws.column_dimensions['F'].width = 16
-    ws.column_dimensions['G'].width = 16
-    ws.column_dimensions['H'].width = 10
-    ws.column_dimensions['I'].width = 8
-    ws.column_dimensions['J'].width = 16
+    ws_detalle.column_dimensions['A'].width = 10
+    ws_detalle.column_dimensions['B'].width = 12
+    ws_detalle.column_dimensions['C'].width = 12
+    ws_detalle.column_dimensions['D'].width = 12
+    ws_detalle.column_dimensions['E'].width = 20
+    ws_detalle.column_dimensions['F'].width = 16
+    ws_detalle.column_dimensions['G'].width = 16
+    ws_detalle.column_dimensions['H'].width = 10
+    ws_detalle.column_dimensions['I'].width = 8
+    ws_detalle.column_dimensions['J'].width = 16
 
     row = 2
-    totales = {'base': 0, 'retencion': 0, 'excluidas': 0}
+    totales = {'base': 0, 'retencion': 0, 'excluidas': 0, 'compras_base': 0, 'compras_ret': 0, 'ventas_base': 0, 'ventas_ret': 0}
 
     # Formato de moneda COP
     currency_format = '#,##0'
@@ -230,33 +233,35 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
         base = doc.get('total', 0) - doc.get('iva', 0)
         ret = calcular_retencion(base, 'compras', doc.get('nit', ''), actividad, es_declarante)
 
-        ws.cell(row=row, column=1, value='Compra')
-        ws.cell(row=row, column=2, value=doc.get('folio', ''))
-        ws.cell(row=row, column=3, value=doc.get('fecha', ''))
-        ws.cell(row=row, column=4, value=doc.get('nit', ''))
-        ws.cell(row=row, column=5, value=doc.get('nombre', ''))
+        ws_detalle.cell(row=row, column=1, value='Compra')
+        ws_detalle.cell(row=row, column=2, value=doc.get('folio', ''))
+        ws_detalle.cell(row=row, column=3, value=doc.get('fecha', ''))
+        ws_detalle.cell(row=row, column=4, value=doc.get('nit', ''))
+        ws_detalle.cell(row=row, column=5, value=doc.get('nombre', ''))
         
         # Base Gravable
-        cell_base = ws.cell(row=row, column=6, value=ret['base'])
+        cell_base = ws_detalle.cell(row=row, column=6, value=ret['base'])
         cell_base.number_format = currency_format
         
         # Base Mínima
-        cell_min = ws.cell(row=row, column=7, value=ret['base_minima_cop'] if ret['base_minima_cop'] > 0 else None)
+        cell_min = ws_detalle.cell(row=row, column=7, value=ret['base_minima_cop'] if ret['base_minima_cop'] > 0 else None)
         cell_min.number_format = currency_format
         
         # Tasa
-        ws.cell(row=row, column=8, value=ret['tasa'])
+        ws_detalle.cell(row=row, column=8, value=ret['tasa'])
         
         # Aplica
-        ws.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
+        ws_detalle.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
         
         # Valor Retención
-        cell_ret = ws.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
+        cell_ret = ws_detalle.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
         cell_ret.number_format = currency_format
 
         totales['base'] += ret['base']
+        totales['compras_base'] += ret['base']
         if ret['aplica']:
             totales['retencion'] += ret['valor']
+            totales['compras_ret'] += ret['valor']
         else:
             totales['excluidas'] += ret['base']
 
@@ -267,33 +272,35 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
         base = doc.get('total', 0) - doc.get('iva', 0)
         ret = calcular_retencion(base, 'ventas', doc.get('nit', ''), actividad, es_declarante)
 
-        ws.cell(row=row, column=1, value='Venta')
-        ws.cell(row=row, column=2, value=doc.get('folio', ''))
-        ws.cell(row=row, column=3, value=doc.get('fecha', ''))
-        ws.cell(row=row, column=4, value=doc.get('nit', ''))
-        ws.cell(row=row, column=5, value=doc.get('nombre', ''))
+        ws_detalle.cell(row=row, column=1, value='Venta')
+        ws_detalle.cell(row=row, column=2, value=doc.get('folio', ''))
+        ws_detalle.cell(row=row, column=3, value=doc.get('fecha', ''))
+        ws_detalle.cell(row=row, column=4, value=doc.get('nit', ''))
+        ws_detalle.cell(row=row, column=5, value=doc.get('nombre', ''))
         
         # Base Gravable
-        cell_base = ws.cell(row=row, column=6, value=ret['base'])
+        cell_base = ws_detalle.cell(row=row, column=6, value=ret['base'])
         cell_base.number_format = currency_format
         
         # Base Mínima
-        cell_min = ws.cell(row=row, column=7, value=ret['base_minima_cop'] if ret['base_minima_cop'] > 0 else None)
+        cell_min = ws_detalle.cell(row=row, column=7, value=ret['base_minima_cop'] if ret['base_minima_cop'] > 0 else None)
         cell_min.number_format = currency_format
         
         # Tasa
-        ws.cell(row=row, column=8, value=ret['tasa'])
+        ws_detalle.cell(row=row, column=8, value=ret['tasa'])
         
         # Aplica
-        ws.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
+        ws_detalle.cell(row=row, column=9, value='✓' if ret['aplica'] else '✗')
         
         # Valor Retención
-        cell_ret = ws.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
+        cell_ret = ws_detalle.cell(row=row, column=10, value=ret['valor'] if ret['aplica'] else 0)
         cell_ret.number_format = currency_format
 
         totales['base'] += ret['base']
+        totales['ventas_base'] += ret['base']
         if ret['aplica']:
             totales['retencion'] += ret['valor']
+            totales['ventas_ret'] += ret['valor']
         else:
             totales['excluidas'] += ret['base']
 
@@ -304,20 +311,77 @@ def generar_reporte_retenciones_excel(planos_data, actividad='4631', es_declaran
     total_font = Font(bold=True, size=11)
 
     row += 1
-    ws.cell(row=row, column=5, value='TOTAL').font = total_font
+    ws_detalle.cell(row=row, column=5, value='TOTAL').font = total_font
     
-    cell_total_base = ws.cell(row=row, column=6, value=totales['base'])
+    cell_total_base = ws_detalle.cell(row=row, column=6, value=totales['base'])
     cell_total_base.font = total_font
     cell_total_base.fill = total_fill
     cell_total_base.number_format = currency_format
     
-    cell_total_ret = ws.cell(row=row, column=10, value=totales['retencion'])
+    cell_total_ret = ws_detalle.cell(row=row, column=10, value=totales['retencion'])
     cell_total_ret.font = total_font
     cell_total_ret.fill = total_fill
     cell_total_ret.number_format = currency_format
 
     # Nota de excluidas
     row += 2
-    ws.cell(row=row, column=5, value=f"Base excluida por mínimo: $ {totales['excluidas']:,.2f} COP").font = Font(italic=True, size=9)
+    ws_detalle.cell(row=row, column=5, value=f"Base excluida por mínimo: $ {totales['excluidas']:,.2f} COP").font = Font(italic=True, size=9)
+
+    # ===== HOJA 2: CONSOLIDADAS =====
+    ws_consolidado = wb.create_sheet('Consolidadas')
+    
+    # Encabezados consolidado
+    headers_cons = ['Tipo Operación', 'Base Gravable (COP)', 'Valor Retención (COP)']
+    
+    cons_header_fill = PatternFill(start_color='2E7D32', end_color='2E7D32', fill_type='solid')
+    cons_header_font = Font(bold=True, color='FFFFFF', size=11)
+    
+    for col, header in enumerate(headers_cons, 1):
+        cell = ws_consolidado.cell(row=1, column=col, value=header)
+        cell.fill = cons_header_fill
+        cell.font = cons_header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    ws_consolidado.column_dimensions['A'].width = 25
+    ws_consolidado.column_dimensions['B'].width = 20
+    ws_consolidado.column_dimensions['C'].width = 20
+
+    # Datos consolidados
+    cons_row = 2
+    
+    # Compras
+    ws_consolidado.cell(row=cons_row, column=1, value='COMPRAS')
+    cell_comp_base = ws_consolidado.cell(row=cons_row, column=2, value=totales['compras_base'])
+    cell_comp_base.number_format = currency_format
+    cell_comp_ret = ws_consolidado.cell(row=cons_row, column=3, value=totales['compras_ret'])
+    cell_comp_ret.number_format = currency_format
+    cons_row += 1
+    
+    # Ventas
+    ws_consolidado.cell(row=cons_row, column=1, value='VENTAS')
+    cell_vent_base = ws_consolidado.cell(row=cons_row, column=2, value=totales['ventas_base'])
+    cell_vent_base.number_format = currency_format
+    cell_vent_ret = ws_consolidado.cell(row=cons_row, column=3, value=totales['ventas_ret'])
+    cell_vent_ret.number_format = currency_format
+    cons_row += 1
+    
+    # Total
+    cons_row += 1
+    total_cons_fill = PatternFill(start_color='C5E1A5', end_color='C5E1A5', fill_type='solid')
+    total_cons_font = Font(bold=True, size=11)
+    
+    cell_total_label = ws_consolidado.cell(row=cons_row, column=1, value='TOTAL')
+    cell_total_label.font = total_cons_font
+    cell_total_label.fill = total_cons_fill
+    
+    cell_total_cons_base = ws_consolidado.cell(row=cons_row, column=2, value=totales['base'])
+    cell_total_cons_base.font = total_cons_font
+    cell_total_cons_base.fill = total_cons_fill
+    cell_total_cons_base.number_format = currency_format
+    
+    cell_total_cons_ret = ws_consolidado.cell(row=cons_row, column=3, value=totales['retencion'])
+    cell_total_cons_ret.font = total_cons_font
+    cell_total_cons_ret.fill = total_cons_fill
+    cell_total_cons_ret.number_format = currency_format
 
     return wb
