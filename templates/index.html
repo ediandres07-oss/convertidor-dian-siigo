@@ -415,15 +415,17 @@
     </div>
 
     <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const loading = document.getElementById('loading');
-        const status = document.getElementById('status');
-        const processBtn = document.getElementById('processBtn');
+        // Esperar a que el DOM cargue completamente
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const loading = document.getElementById('loading');
+            const status = document.getElementById('status');
+            const processBtn = document.getElementById('processBtn');
 
-        let archivoSeleccionado = null;
+            let archivoSeleccionado = null;
 
-        // Dark mode
+            // Dark mode
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
@@ -510,6 +512,7 @@
                 processBtn.disabled = false;
             });
         }
+        }); // Fin de DOMContentLoaded
     </script>
 </body>
 </html>
