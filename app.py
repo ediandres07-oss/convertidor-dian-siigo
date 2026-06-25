@@ -357,34 +357,37 @@ def validar_liquidacion():
     """Valida el Excel de liquidación sin procesar"""
     try:
         if 'file' not in request.files:
-            return {'error': 'No file uploaded'}, 400
+            return jsonify({'error': 'No file uploaded'}), 400
 
         file = request.files['file']
         if not file or file.filename == '':
-            return {'error': 'No file selected'}, 400
+            return jsonify({'error': 'No file selected'}), 400
 
-        input_stream = io.BytesIO(file.read())
-        wb = openpyxl.load_workbook(input_stream)
+        try:
+            input_stream = io.BytesIO(file.read())
+            wb = openpyxl.load_workbook(input_stream, data_only=False)
+        except Exception as e:
+            return jsonify({'error': f'Archivo Excel inválido: {str(e)}'}), 400
 
-        # Validación flexible: solo verificar que el archivo sea válido y tenga datos
+        # Validación flexible
         if not wb.sheetnames:
-            return {'error': 'El archivo Excel no tiene hojas'}, 400
+            return jsonify({'error': 'El archivo no tiene hojas'}), 400
 
-        # Contar filas en la primera hoja
         ws = wb.active
         if ws.max_row < 2:
-            return {'error': 'El archivo está vacío o solo tiene encabezados'}, 400
+            return jsonify({'error': 'El archivo está vacío'}), 400
 
         empleados_count = ws.max_row - 1
 
-        return {
+        return jsonify({
             'valido': True,
             'empleados_count': empleados_count,
-            'mensaje': f'✅ Excel válido con {empleados_count} registros'
-        }, 200
-    
+            'mensaje': f'Excel válido con {empleados_count} registros'
+        }), 200
+
     except Exception as e:
-        return {'error': f'Error validando: {str(e)}'}, 400
+        import traceback
+        return jsonify({'error': f'Error: {str(e)}', 'details': traceback.format_exc()}), 500
 
 @app.route('/api/previsualizar-liquidacion/<int>/<nombre>', methods=['POST'])
 def previsualizar_liquidacion(index, nombre):
