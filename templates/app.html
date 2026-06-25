@@ -672,7 +672,7 @@
                     </label>
                 </div>
 
-                <button class="btn btn-primary" style="margin-top: 16px;">
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="guardarConfiguracion()">
                     💾 Guardar Configuración
                 </button>
             </div>
@@ -854,6 +854,37 @@
                 showAlert('nomina-message', `❌ ${err.message}`, 'danger');
             }
         }
+
+        function guardarConfiguracion() {
+            const nombre = document.getElementById('empresa-nombre').value;
+            const nit = document.getElementById('empresa-nit').value;
+            const notif = document.getElementById('notificaciones').checked;
+
+            if (!nombre || !nit) {
+                alert('❌ Ingresa nombre y NIT de empresa');
+                return;
+            }
+
+            localStorage.setItem('empresa_nombre', nombre);
+            localStorage.setItem('empresa_nit', nit);
+            localStorage.setItem('notificaciones', notif);
+
+            alert('✅ Configuración guardada correctamente');
+        }
+
+        // Cargar configuración guardada
+        function cargarConfiguracion() {
+            const nombre = localStorage.getItem('empresa_nombre');
+            const nit = localStorage.getItem('empresa_nit');
+            const notif = localStorage.getItem('notificaciones');
+
+            if (nombre) document.getElementById('empresa-nombre').value = nombre;
+            if (nit) document.getElementById('empresa-nit').value = nit;
+            if (notif !== null) document.getElementById('notificaciones').checked = notif === 'true';
+        }
+
+        // Cargar al iniciar
+        cargarConfiguracion();
 
         async function subirSiigo() {
             const user = document.getElementById('siigo-user').value;
