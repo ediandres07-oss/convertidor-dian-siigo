@@ -1141,41 +1141,63 @@
             }
         }
 
-        async function previewLiquidacion() {
+        async function cargarEmpleados() {
             const archivo = document.getElementById('liq-archivo').files[0];
-            const index = document.getElementById('liq-select-empleado').value;
-            const empresa = document.getElementById('liq-empresa').value || 'Mi Empresa';
             
-            if (!archivo || index === '') {
-                alert('Selecciona archivo y empleado');
+            if (!archivo) {
+                alert('Selecciona un archivo Excel');
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', archivo);
-            formData.append('empresa_nombre', empresa);
+
+            showLiqMessage('⏳ Cargando empleados...', 'info');
 
             try {
-                const response = await fetch(`/api/previsualizar-liquidacion/${index}/${empresa}`, {
+                const response = await fetch('/api/listar-empleados-liquidar', {
                     method: 'POST',
                     body: formData
                 });
 
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                    showLiqMessage('✅ PDF abierto en nueva ventana', 'success');
+                const data = await response.json();
+
+                if (data.empleados) {
+                    const lista = document.getElementById('liq-lista-empleados');
+                    lista.innerHTML = '';
+                    
+                    data.empleados.forEach(emp => {
+                        const div = document.createElement('div');
+                        div.style.padding = '8px';
+                        div.style.borderBottom = '1px solid var(--border)';
+                        div.style.display = 'flex';
+                        div.style.justifyContent = 'space-between';
+                        div.style.alignItems = 'center';
+                        
+                        div.innerHTML = `
+                            <div>
+                                <strong>${emp.nombre}</strong><br>
+                                <small style="color: var(--text-light);">${emp.documento}</small>
+                            </div>
+                            <button class="btn btn-secondary" onclick="descargarPDF(${emp.id}, '${emp.nombre}')" style="padding: 4px 12px; font-size: 12px;">
+                                ⬇️ PDF
+                            </button>
+                        `;
+                        
+                        lista.appendChild(div);
+                    });
+                    
+                    document.getElementById('liq-empleados').style.display = 'block';
+                    showLiqMessage(`✅ ${data.empleados.length} empleados listos para descargar`, 'success');
                 } else {
-                    const error = await response.json();
-                    showLiqMessage('❌ ' + error.error, 'error');
+                    showLiqMessage('❌ ' + (data.error || 'Error'), 'error');
                 }
             } catch (error) {
                 showLiqMessage('❌ Error: ' + error.message, 'error');
             }
         }
 
-        async function generarLiquidacionesLote() {
+        async function descargarPDF(empId, nombre) {
             const archivo = document.getElementById('liq-archivo').files[0];
             const empresa = document.getElementById('liq-empresa').value || 'Mi Empresa';
             const nit = document.getElementById('liq-nit').value || '';
@@ -1190,10 +1212,8 @@
             formData.append('empresa_nombre', empresa);
             formData.append('empresa_nit', nit);
 
-            showLiqMessage('⏳ Generando liquidaciones...', 'info');
-
             try {
-                const response = await fetch('/api/generar-liquidaciones-lote', {
+                const response = await fetch(`/api/descargar-liquidacion/${empId}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1203,17 +1223,15 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'Liquidaciones.zip';
+                    a.download = `Liquidacion_${nombre.replace(" ", "_")}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
-                    showLiqMessage('✅ Liquidaciones generadas y descargadas', 'success');
                 } else {
-                    const error = await response.json();
-                    showLiqMessage('❌ ' + error.error, 'error');
+                    alert('Error descargando PDF');
                 }
             } catch (error) {
-                showLiqMessage('❌ Error: ' + error.message, 'error');
+                alert('Error: ' + error.message);
             }
         }
 
