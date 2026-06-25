@@ -442,6 +442,11 @@
                 </div>
             </li>
             <li class="menu-item">
+                <div class="menu-link" onclick="showSection('retenciones')">
+                    💰 Retenciones
+                </div>
+            </li>
+            <li class="menu-item">
                 <div class="menu-link" onclick="showSection('configuracion')">
                     ⚙️ Configuración
                 </div>
@@ -644,6 +649,56 @@
                 </button>
 
                 <div class="alert" id="siigo-message" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+
+        <!-- SECTION: RETENCIONES -->
+        <div id="retenciones" class="section">
+            <h2 class="section-title">💰 Calculadora de Retenciones 2026</h2>
+
+            <div class="card">
+                <p style="margin-bottom: 16px; color: var(--text-light);">
+                    Calcula retenciones en la fuente según norma colombiana
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label>Monto Base Gravable</label>
+                        <input type="number" id="ret-base" placeholder="1000000" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Operación</label>
+                        <select id="ret-tipo" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--text);">
+                            <option value="ventas">📈 Ventas (Autoretención 1.20%)</option>
+                            <option value="compras">📦 Compras (2.5%)</option>
+                            <option value="gastos">💼 Gastos (2.5%)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="calcularRetencion()" style="width: 100%; margin-bottom: 16px;">
+                    🧮 Calcular Retención
+                </button>
+
+                <div class="alert" id="ret-resultado" style="margin-top: 16px;"></div>
+
+                <div id="ret-detalle" style="margin-top: 20px; padding: 16px; background: rgba(41, 128, 185, 0.1); border-radius: 8px; display: none;">
+                    <h4 style="margin-bottom: 12px;">Detalle de Retención:</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <strong>Base Gravable:</strong>
+                            <p id="ret-base-val" style="font-size: 18px; color: var(--primary);">$0</p>
+                        </div>
+                        <div>
+                            <strong>Tasa:</strong>
+                            <p id="ret-tasa-val" style="font-size: 18px; color: var(--primary);">0%</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                        <strong style="color: var(--success); font-size: 16px;">Valor Retención:</strong>
+                        <p id="ret-valor-val" style="font-size: 24px; color: var(--success); font-weight: bold;">$0</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -852,6 +907,50 @@
                 showAlert('nomina-message', '✅ Liquidaciones generadas. Descargando...', 'success');
             } catch (err) {
                 showAlert('nomina-message', `❌ ${err.message}`, 'danger');
+            }
+        }
+
+        async function calcularRetencion() {
+            const base = parseFloat(document.getElementById('ret-base').value);
+            const tipo = document.getElementById('ret-tipo').value;
+
+            if (!base || base <= 0) {
+                showAlert('ret-resultado', '❌ Ingresa un monto válido', 'danger');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/retenciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base, tipo })
+                });
+
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const data = await res.json();
+
+                // Mostrar resultado
+                const tipoNombre = {
+                    'ventas': 'Autoretención Ventas',
+                    'compras': 'Retención Compras',
+                    'gastos': 'Retención Gastos'
+                };
+
+                showAlert('ret-resultado', `✅ ${tipoNombre[tipo]} calculada`, 'success');
+
+                // Mostrar detalle
+                const detalle = document.getElementById('ret-detalle');
+                document.getElementById('ret-base-val').textContent =
+                    `$${data.base.toLocaleString('es-CO')}`;
+                document.getElementById('ret-tasa-val').textContent =
+                    `${data.tasa}%`;
+                document.getElementById('ret-valor-val').textContent =
+                    `$${data.valor.toLocaleString('es-CO')}`;
+                detalle.style.display = 'block';
+
+            } catch (err) {
+                showAlert('ret-resultado', `❌ ${err.message}`, 'danger');
             }
         }
 
