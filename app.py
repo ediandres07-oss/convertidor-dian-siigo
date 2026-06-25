@@ -96,6 +96,37 @@ def liquidar_iva():
         return {'error': f'Error generando liquidación: {str(e)}'}, 500
 
 
+@app.route('/api/liquidar-retenciones', methods=['POST'])
+def liquidar_retenciones():
+    if 'file' not in request.files:
+        return {'error': 'No se proporcionó ningún archivo'}, 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return {'error': 'Archivo no seleccionado'}, 400
+
+    try:
+        input_stream = io.BytesIO(file.read())
+        output_stream = generar_reporte_retenciones_excel({
+            'compras': [],
+            'ventas': [],
+            'gastos': []
+        })
+
+        original_name = file.filename.rsplit('.', 1)[0]
+        download_name = f"RETENCIONES_{original_name}.xlsx"
+
+        return send_file(
+            output_stream,
+            as_attachment=True,
+            download_name=download_name,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return {'error': f'Error generando retenciones: {str(e)}'}, 500
+
+
 @app.route('/api/nomina', methods=['POST'])
 def nomina():
     if 'balance' not in request.files:
