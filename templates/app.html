@@ -1723,9 +1723,41 @@
         </script>
 
         <!-- LIQUIDACIONES NUEVA -->
-        <div class="section" id="liquidacion" style="display: block; margin-left: 50px; padding-left: 30px;">
-            <div style="max-width: 900px; margin: 0 auto; padding: 20px; margin-left: 50px;">
-                
+        <div class="section" id="liquidacion" style="display: none;">
+            <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+                <h1 style="margin-bottom: 30px;">👷 Generar Liquidaciones de Nómina</h1>
+
+                <div style="background: white; border-radius: 8px; padding: 20px; border: 1px solid var(--border); margin-bottom: 20px;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">📁 Archivo Excel (ejemplo_liquidacion.xlsx):</label>
+                        <input type="file" id="liq-archivo" accept=".xlsx,.xls" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">🏢 Nombre Empresa:</label>
+                        <input type="text" id="liq-empresa" placeholder="Mi Empresa S.A.S" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">📝 NIT Empresa:</label>
+                        <input type="text" id="liq-nit" placeholder="900123456-7" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                        <button class="btn btn-primary" onclick="validarLiquidacion()" style="padding: 12px; font-size: 16px;">✓ Validar Excel</button>
+                        <button class="btn btn-primary" onclick="cargarEmpleados()" style="padding: 12px; font-size: 16px;">👥 Cargar Empleados</button>
+                        <button class="btn btn-primary" onclick="descargarTodosPDF()" style="padding: 12px; font-size: 16px;">📥 Descargar PDFs</button>
+                    </div>
+                </div>
+
+                <div id="liq-empleados" style="display: none; background: white; border-radius: 8px; padding: 20px; border: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 15px;">Empleados encontrados:</h3>
+                    <div id="liq-lista-empleados" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
+
+                <div id="liq-mensaje" style="display: none; margin-top: 20px; padding: 15px; border-radius: 8px; border-left: 4px solid #059669; background: rgba(5, 150, 105, 0.1);"></div>
+            </div>
+        </div>
 
 </body>
 </html>
