@@ -224,11 +224,10 @@ class LiquidacionCST:
             'subtotal_prestaciones': round(base_prestaciones, 2),
             'indemnizacion': indemnizacion,
             'aportes_seguridad_social': aportes,
-            'total_pagable': round(total_pagable, 2),
-            'detalle': self._generar_detalle_liquidacion()
+            'total_pagable': round(total_pagable, 2)
         }
 
-    def _generar_detalle_liquidacion(self) -> str:
+    def generar_detalle_liquidacion(self) -> str:
         """Genera detalle formateado de la liquidación"""
         liq = self.calcular_liquidacion_completa()
 
