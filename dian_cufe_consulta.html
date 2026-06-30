@@ -1,0 +1,50 @@
+<!-- Sección de Consulta de CUFE para la pestaña Descargas -->
+<!-- Incluir esto en el lugar de la sección actual de descargas -->
+
+<div id="descargas" class="section">
+    <h2 class="section-title">Descargar de DIAN</h2>
+
+    <!-- CONSULTA DE CUFE -->
+    <div class="card">
+        <h3 style="margin-bottom: 16px; color: var(--primary);">🔍 Consultar Factura Electrónica</h3>
+        <p style="margin-bottom: 16px; color: var(--text-light); font-size: 13px;">
+            Ingresa el CUFE (Código Único de Factura Electrónica) para consultar y descargar facturas
+        </p>
+
+        <div class="form-group">
+            <label>CUFE (96 caracteres alfanuméricos)</label>
+            <textarea id="cufe-input" placeholder="Pega el CUFE de la factura electrónica aquí..."
+                style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: monospace; resize: vertical; min-height: 60px;"></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="consultarCUFE()" style="width: 100%;">
+            🔎 Consultar Factura
+        </button>
+
+        <div id="cufe-resultado" style="margin-top: 16px; display: none; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 6px;"></div>
+    </div>
+
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border);">
+
+    <!-- DESCARGA TRADICIONAL -->
+    <div class="card">
+        <h3 style="margin-bottom: 16px; color: var(--primary);">📥 Descargar Reporte</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label>Usuario DIAN</label>
+                <input type="text" id="dian-user" placeholder="tu@email.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña DIAN</label>
+                <input type="password" id="dian-pass" placeholder="••••••••">
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="descargarDIAN()" style="width: 100%; margin-top: 12px;">
+            📥 Descargar Reporte DIAN
+        </button>
+
+        <div class="alert alert-warning" id="dian-message" style="margin-top: 16px;"></div>
+    </div>
+</div>

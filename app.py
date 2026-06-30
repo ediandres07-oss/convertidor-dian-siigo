@@ -602,3 +602,41 @@ def descargar_liquidacion(emp_id):
     except Exception as e:
         return {'error': f'Error: {str(e)}'}, 500
 
+
+
+
+# ===== ENDPOINT CONSULTA CUFE DIAN =====
+@app.route('/api/consultar-cufe', methods=['POST'])
+def consultar_cufe():
+    """Consulta una factura electrónica por CUFE en la DIAN"""
+    try:
+        data = request.json
+        cufe = data.get('cufe', '').strip().upper()
+        
+        # Validar CUFE
+        if not cufe or len(cufe) != 96 or not cufe.isalnum():
+            return {
+                'estado': 'error',
+                'mensaje': 'CUFE inválido. Debe tener 96 caracteres alfanuméricos'
+            }, 400
+        
+        # Por ahora, retornamos un template de respuesta
+        # En producción, aquí iría la consulta real a DIAN con Playwright
+        
+        return {
+            'estado': 'no_encontrada',
+            'mensaje': f'CUFE {cufe[:10]}... no encontrado en la plataforma DIAN',
+            'sugerencias': [
+                '1. Verifica que el CUFE sea correcto (96 caracteres)',
+                '2. La factura debe estar validada por la DIAN',
+                '3. Intenta nuevamente en algunos minutos',
+                '4. Accede al portal de la DIAN para más información'
+            ]
+        }
+        
+    except Exception as e:
+        return {
+            'estado': 'error',
+            'mensaje': f'Error consultando CUFE: {str(e)}'
+        }, 500
+
