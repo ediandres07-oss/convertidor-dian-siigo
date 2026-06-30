@@ -1,0 +1,154 @@
+╔════════════════════════════════════════════════════════════╗
+║    LIQUIDADOR DE FORMULARIO 210 - INSTALACIÓN RÁPIDA      ║
+╚════════════════════════════════════════════════════════════╝
+
+📦 PASO 1: INSTALAR DEPENDENCIAS
+════════════════════════════════════════════════════════════
+
+Opción A (Recomendado):
+  pip install -r requirements.txt
+
+Opción B (Manual):
+  pip install streamlit pandas openpyxl xlrd
+
+✅ Listo en 2-3 minutos
+
+
+🚀 PASO 2: INICIAR LA APLICACIÓN
+════════════════════════════════════════════════════════════
+
+Opción A (Más fácil - Script):
+  ./iniciar_liquidador.sh
+
+Opción B (Directo):
+  streamlit run app_liquidador_renta.py
+
+📍 Se abrirá automáticamente en: http://localhost:8501
+
+
+📁 PASO 3: CARGAR TUS ARCHIVOS
+════════════════════════════════════════════════════════════
+
+Necesitas:
+  1. Reporte de Exógena DIAN (.xlsx)
+     → Descarga de: www.dian.gov.co/datosabiertos
+
+  2. (Opcional) Formulario 210 base (.xlsx)
+     → Plantilla para llenar
+
+
+💰 PASO 4: GENERAR LIQUIDACIÓN
+════════════════════════════════════════════════════════════
+
+En la app:
+  1️⃣  Pestaña "📁 Cargar Archivos"
+      → Sube el archivo de Exógena
+
+  2️⃣  Pestaña "🔗 Mapear Datos"
+      → Verifica la clasificación de ingresos
+
+  3️⃣  Pestaña "💰 Liquidación"
+      → Ajusta % de deducción
+      → Click en "🧮 Calcular Liquidación"
+
+  4️⃣  Pestaña "📈 Resultados"
+      → Revisa totales y cifras
+      → Descarga Excel ("📄 Generar Excel")
+
+
+📊 ARCHIVOS GENERADOS
+════════════════════════════════════════════════════════════
+
+La app creará:
+  • formulario_210_liquidado_YYYYMMDD_HHMMSS.xlsx
+    → Excel con Formulario 210 completo
+    → Con cálculos y fórmulas dinámicas
+
+
+🔧 ARCHIVOS DEL PROYECTO
+════════════════════════════════════════════════════════════
+
+liquidador_renta.py
+  → Módulo principal de cálculo
+  → Lógica de IRPF, aporte solidario, retenciones
+  → Generación de Excel
+
+app_liquidador_renta.py
+  → Interfaz web con Streamlit
+  → 4 pestañas principales
+  → Upload de archivos y descarga de resultados
+
+iniciar_liquidador.sh
+  → Script de inicio automático
+  → Instala dependencias si faltan
+  → Abre navegador
+
+README_LIQUIDADOR.md
+  → Guía completa y ejemplos
+  → Troubleshooting
+  → FAQ
+
+GUIA_LIQUIDADOR_210.md
+  → Documentación técnica
+  → Mapeo de campos
+  → Fórmulas de cálculo
+
+requirements.txt
+  → Dependencias Python
+
+
+⚠️  IMPORTANTE ANTES DE USAR
+════════════════════════════════════════════════════════════
+
+✅ Esta herramienta es INFORMATIVA
+✅ Valida con un contador ANTES de presentar a DIAN
+✅ Comprueba retenciones con certificados FORMUL-2649
+✅ Revisa deducciones con documentación soporta
+✅ Mantén tu info de Exógena actualizada
+
+
+🎯 EJEMPLO DE USO
+════════════════════════════════════════════════════════════
+
+$ ./iniciar_liquidador.sh
+
+📦 Verificando dependencias...
+✅ Dependencias listas
+
+🚀 Iniciando aplicación web...
+
+📍 Abre tu navegador en: http://localhost:8501
+⌨️  Presiona Ctrl+C para salir
+
+[Navegador abre automáticamente]
+
+→ Carga archivo Exógena
+→ Revisa ingresos detectados
+→ Mapea categorías
+→ Calcula impuesto
+→ Descarga Excel
+
+¡Listo! 🎉
+
+
+💡 TIPS
+════════════════════════════════════════════════════════════
+
+• Si la app es lenta: Reinicia → streamlit run app_liquidador_renta.py
+
+• Para múltiples contribuyentes:
+  - Crea sesión nueva (Ctrl+R)
+  - O ejecuta script Python manualmente
+
+• Guardar configuración:
+  - Copia el Excel generado a tu carpeta de trabajos
+  - Mantén copia del archivo de Exógena
+
+• Actualizar tarifas (2025+):
+  - Edita RANGOS_IRPF en liquidador_renta.py
+  - Actualiza UVT_2024 (o añade UVT_2025)
+
+════════════════════════════════════════════════════════════
+¿Preguntas? → Lee README_LIQUIDADOR.md
+¿Errores? → Revisa GUIA_LIQUIDADOR_210.md
+════════════════════════════════════════════════════════════

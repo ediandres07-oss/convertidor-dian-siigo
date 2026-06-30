@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Declaración de Renta DIAN 2025</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 { color: #333; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 40px; font-size: 14px; }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+            margin-bottom: 30px;
+        }
+        .upload-area:hover { border-color: #764ba2; background: #f0f2ff; }
+        .upload-icon { font-size: 48px; margin-bottom: 15px; }
+        .upload-text { color: #333; font-weight: 500; }
+        input[type="file"] { display: none; }
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status {
+            display: none;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status.success { background: #e8f5e9; border-left: 4px solid #4caf50; color: #2e7d32; }
+        .status.error { background: #ffebee; border-left: 4px solid #f44336; color: #c62828; }
+        .loading { display: none; text-align: center; }
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .download-link {
+            display: none;
+            background: #4caf50;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .download-link:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Declaración de Renta DIAN 2025</h1>
+        <p class="subtitle">Carga tu Exógena y genera automáticamente tu Ayuda Renta</p>
+
+        <div class="status" id="status"></div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Arrastra tu Exógena aquí o haz clic</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Procesando tu Exógena...</p>
+        </div>
+
+        <button id="processBtn" onclick="procesarExogena()" disabled>
+            ▶️ Procesar Exógena
+        </button>
+
+        <a class="download-link" id="downloadLink">
+            ⬇️ Descargar Ayuda Renta Diligenciada
+        </a>
+
+        <footer style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+            <p>Versión 1.0 • Automatizador DIAN 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const processBtn = document.getElementById('processBtn');
+        const loading = document.getElementById('loading');
+        const downloadLink = document.getElementById('downloadLink');
+        let archivoSeleccionado = null;
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.background = '#f0f2ff'; });
+        uploadArea.addEventListener('dragleave', e => { uploadArea.style.background = '#f8f9ff'; });
+        uploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadArea.style.background = '#f8f9ff';
+            if (e.dataTransfer.files.length > 0) {
+                archivoSeleccionado = e.dataTransfer.files[0];
+                processBtn.disabled = false;
+            }
+        });
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length > 0) {
+                archivoSeleccionado = e.target.files[0];
+                processBtn.disabled = false;
+            }
+        });
+
+        async function procesarExogena() {
+            if (!archivoSeleccionado) {
+                alert('Por favor selecciona un archivo');
+                return;
+            }
+
+            processBtn.disabled = true;
+            loading.style.display = 'block';
+            status.style.display = 'none';
+            downloadLink.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('exogena', archivoSeleccionado);
+
+                const response = await fetch('/api/procesar', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                loading.style.display = 'none';
+
+                if (data.error) {
+                    status.innerHTML = `<strong>❌ Error:</strong> ${data.error}`;
+                    status.className = 'status error';
+                } else {
+                    status.innerHTML = `
+                        <strong>✅ ¡Éxito!</strong><br>
+                        Se inyectaron ${data.total_inyectados} de ${data.total_valores} valores.<br>
+                        El archivo está listo para descargar.
+                    `;
+                    status.className = 'status success';
+                    
+                    const timestamp = data.archivo.match(/(\d{8}_\d{6})/)[0];
+                    downloadLink.href = `/api/descargar/${timestamp}`;
+                    downloadLink.style.display = 'block';
+                }
+                status.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                status.innerHTML = `<strong>❌ Error de conexión:</strong> ${err.message}<br><br>⚠️ Asegúrate de que el servidor esté ejecutándose:<br><code>python3 app_declaracion_renta.py</code>`;
+                status.className = 'status error';
+                status.style.display = 'block';
+            }
+
+            processBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>

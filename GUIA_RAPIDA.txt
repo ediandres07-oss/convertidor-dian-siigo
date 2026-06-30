@@ -1,0 +1,148 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                ║
+║  GUÍA RÁPIDA - AUTOMATIZADOR EXÓGENA → AYUDA RENTA 2025                       ║
+║                                                                                ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ INSTALACIÓN (SOLO PRIMERA VEZ)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abrir Terminal:
+   cmd + espacio → Terminal → Enter
+
+2. Instalar dependencias:
+   pip3 install pandas openpyxl
+
+3. Listo para usar
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ EJECUCIÓN (CADA VEZ QUE USES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Paso 1: Verifica tu Exógena esté en la ruta correcta
+   /Users/edison/Library/Containers/net.whatsapp.WhatsApp/Data/tmp/documents/0141329A-8688-45CB-9787-E5FD5051A852/reporteExogena2024Elizabeth.xlsx
+
+Paso 2: Abre Terminal y copia esto:
+   cd /Users/edison/Desktop/proyecto-subir\ info\ a\ siigo\ nube/
+
+Paso 3: Verifica configuración (recomendado):
+   python3 verificar_config.py
+
+Paso 4: Ejecuta el automatizador:
+   python3 exogena_to_ayuda_renta.py
+
+Paso 5: Abre el resultado:
+   open AyudaRenta_Diligenciado.xlsm
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ COPIAR Y PEGAR (LO MÁS RÁPIDO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd /Users/edison/Desktop/proyecto-subir\ info\ a\ siigo\ nube/ && python3 exogena_to_ayuda_renta.py
+
+Luego:
+open AyudaRenta_Diligenciado.xlsm
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ QUÉ ESPERAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Mensaje: "Se leyeron 59 registros"
+✓ Mensaje: "22 categorías procesadas"
+✓ Mensaje: "✓ 7 inyecciones realizadas"
+✓ Mensaje: "✓ PROCESO COMPLETADO EXITOSAMENTE"
+✓ Archivo: AyudaRenta_Diligenciado.xlsm (8-9 MB)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VALORES INYECTADOS (RESUMEN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hoja: Retenciones
+  └─ Retenciones (R132): $1,362,514
+
+Hoja: Patrimonio
+  ├─ CDTs/Inversiones: $335,626,272
+  └─ Bienes Raíces: $69,318,000
+
+Hoja: Efectivo_Bancos_Cuentas
+  └─ 2 cuentas bancarias: $49,539,342 total
+
+Hoja: Salarios_Demas_Pagos_Laborales
+  └─ 3 tipos de ingresos: $82,744,800 total
+
+Hoja: Inter_Rend_Finan
+  └─ 9 CDTs rendimientos: $33,810,314 total
+
+Hoja: Inversiones
+  └─ Inversiones totales: $1,297,938,192 total
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ SOLUCIÓN DE PROBLEMAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEMA: "ModuleNotFoundError: No module named 'pandas'"
+SOLUCIÓN: pip3 install pandas openpyxl
+
+PROBLEMA: "FileNotFoundError: Archivo Exógena no encontrado"
+SOLUCIÓN: Verifica que la ruta en el script sea correcta
+
+PROBLEMA: "Data Validation extension is not supported"
+SOLUCIÓN: No es error, archivo se guardará correctamente
+
+PROBLEMA: "Las macros desaparecieron"
+SOLUCIÓN: Excel a veces las remueve, es normal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PERSONALIZACIÓN (CAMBIAR CELDAS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abre: exogena_to_ayuda_renta.py con editor de texto
+
+2. Busca: CONFIG = {
+
+3. Encuentra la celda que quieres cambiar:
+   "celda": "C32",  ← Cambiar aquí
+
+4. Guarda el archivo
+
+5. Ejecuta nuevamente el script
+
+Ver MAPEO_DETALLADO.md para todas las celdas
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ARCHIVOS DEL PROYECTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+exogena_to_ayuda_renta.py  ← EJECUTAR ESTO (script principal)
+verificar_config.py         ← Verificar antes de ejecutar
+INSTRUCCIONES_EJECUCION.md  ← Guía detallada
+MAPEO_DETALLADO.md          ← Todos los mapeos explicados
+README_AUTOMATIZADOR_EXOGENA.md ← Descripción general
+RESUMEN_EJECUTIVO.md        ← Resumen del proyecto
+GUIA_RAPIDA.txt            ← ESTE ARCHIVO
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CONTACTO / AYUDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Documentación completa en:
+  → INSTRUCCIONES_EJECUCION.md (paso a paso)
+  → MAPEO_DETALLADO.md (explicación técnica)
+
+Código con comentarios:
+  → exogena_to_ayuda_renta.py (abre en editor)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+¡Listo! Solo 5 pasos y tu Ayuda Renta estará completamente diligenciada. ✓
+

@@ -8,7 +8,10 @@
       "Bash(unzip -l /tmp/prima.zip)",
       "Bash(file \"/Users/edison/Downloads/0616.mov\")",
       "Bash(ffprobe -v error -show_entries format=duration,size -show_entries stream=width,height,codec_name,codec_type,r_frame_rate,bit_rate \"/Users/edison/Downloads/0616.mov\")",
-      "Bash(ffmpeg -i \"/Users/edison/Downloads/0616.mov\")"
+      "Bash(ffmpeg -i \"/Users/edison/Downloads/0616.mov\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Feature: Incluir nombres de terceros en balance de prueba *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -1,0 +1,26 @@
+{
+  "contribuyente": {
+    "cedula": "44004730",
+    "nombre": "GIRALDO GARCIA ELIZABETH",
+    "ano_gravable": 2024
+  },
+  "parametros": {
+    "deduccion_pct": 10,
+    "ano_gravable": 2024
+  },
+  "calculos": {
+    "total_ingresos": 4926384017.0,
+    "deduccion": 492638401.70000005,
+    "deduccion_pct": 10,
+    "base_liquida": 4433745615.3,
+    "irpf": 1460589377.661,
+    "aporte_solidario": 36369616.153000005,
+    "total_impuesto": 1496958993.8140001,
+    "retenciones": 10.0,
+    "saldo_pagar": 1496958983.8140001,
+    "acreencia": 0,
+    "uvt_2025": 49799
+  },
+  "fecha_generacion": "2026-06-27T20:20:41.654843",
+  "uvt_2025": 49799
+}

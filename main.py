@@ -6,8 +6,20 @@ Servidor de API para Liquidación de Prestaciones
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.encoders import JSONEncoder
 from app.routers import payroll, legacy
 import os
+import json
+import math
+
+class SafeJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, float):
+            if math.isnan(obj):
+                return 0
+            elif math.isinf(obj):
+                return 0
+        return super().default(obj)
 
 # ============================================
 # INICIALIZACIÓN
@@ -17,7 +29,8 @@ app = FastAPI(
     description="API para cálculo y generación de PDF de prestaciones sociales",
     version="2.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    json_encoder=SafeJSONEncoder
 )
 
 # ============================================

@@ -1,0 +1,168 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        APP DECLARACIÓN DE RENTA 2025 - GUÍA DE USO RÁPIDA                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 ¿QUÉ HACE ESTA APP?
+
+La app automatiza el proceso de declaración de renta 2025:
+  1. Carga tu archivo de exógena DIAN
+  2. Clasifica automáticamente tus rentas
+  3. Calcula las cédulas (General, Trabajo, etc.)
+  4. Genera un Excel del Formulario 210 para presentar
+
+════════════════════════════════════════════════════════════════════════════
+
+🚀 INSTALACIÓN RÁPIDA
+
+Paso 1: Instalar dependencias
+  pip install streamlit pandas openpyxl
+
+Paso 2: Ejecutar la app
+  streamlit run app_declaracion_renta_2025.py
+
+O simplemente:
+  ./INICIAR_APP_DECLARACION_2025.sh
+
+════════════════════════════════════════════════════════════════════════════
+
+📁 ARCHIVOS INCLUIDOS
+
+✅ app_declaracion_renta_2025.py
+   → Aplicación principal (Streamlit)
+
+✅ cedulas_2025.py
+   → Módulo de cálculos de cédulas
+
+✅ ejemplo_exogena.xlsx
+   → Archivo de prueba para probar la app
+
+✅ README_DECLARACION_RENTA_2025.md
+   → Documentación completa
+
+✅ INICIAR_APP_DECLARACION_2025.sh
+   → Script para ejecutar (macOS/Linux)
+
+════════════════════════════════════════════════════════════════════════════
+
+📖 CÓMO USAR LA APP
+
+PASO 1: CARGAR EXÓGENA
+  □ Haz clic en "Paso 1" en la barra lateral
+  □ Sube tu archivo Excel con datos de exógena DIAN
+  □ La app detectará automáticamente:
+    - Cédula del contribuyente
+    - Nombre
+    - Todas tus rentas y conceptos
+  □ Revisa los datos en la tabla "Rentas Detectadas"
+  □ Haz clic en "Continuar →"
+
+PASO 2: CALCULAR CÉDULAS
+  □ La app distribuye tus rentas en cédulas:
+    - Cédula General → Dividendos, Intereses, Arrendamiento
+    - Cédula de Trabajo → Salarios, Honorarios, Comisiones
+  □ Verás:
+    - Ingresos totales por cédula
+    - Deducciones permitidas
+    - Renta líquida por cédula
+    - Resumen total con IRPF calculado
+  □ Haz clic en "Continuar →"
+
+PASO 3: GENERAR FORMULARIO 210
+  □ Puedes editar tu cédula y nombre si lo necesitas
+  □ Verifica los datos en "Vista Previa"
+  □ Haz clic en "Generar Formulario 210"
+  □ Descarga el Excel con tu formulario 210 completo
+
+════════════════════════════════════════════════════════════════════════════
+
+📊 VALORES APLICABLES 2025
+
+  • UVT: $47,065
+  • SMLV: $1,320,000
+  • Tarifas IRPF: Progresivas según renta neta
+  • Aporte Solidario: 1% sobre rentas > 16,000 UVT
+
+════════════════════════════════════════════════════════════════════════════
+
+⚠️ FORMATO DEL ARCHIVO EXÓGENA
+
+Tu archivo Excel debe tener esta estructura:
+
+  ┌─────────────────────────────────────────────────┐
+  │ Identificación:      1.234.567.890              │
+  │ Nombre:              Juan Pérez García          │
+  │ Año:                 2024                       │
+  │                                                 │
+  │ Concepto │ Tipo de Renta │ Valor              │
+  ├─────────────────────────────────────────────────┤
+  │ Salario  │ Trabajo       │ 600,000,000        │
+  │ Dividend │ Capital       │ 150,000,000        │
+  │ Interese │ Capital       │ 25,000,000         │
+  └─────────────────────────────────────────────────┘
+
+  Usa el archivo "ejemplo_exogena.xlsx" como referencia
+
+════════════════════════════════════════════════════════════════════════════
+
+✅ EJEMPLO DE USO
+
+1. Abre la app:
+   streamlit run app_declaracion_renta_2025.py
+
+2. Carga el archivo "ejemplo_exogena.xlsx"
+
+3. Verás que detecta:
+   - Cédula: 1.234.567.890
+   - Nombre: Juan Pérez García
+   - Rentas totales: $891,000,000
+
+4. En Paso 2 verás:
+   - Cédula General: $175,000,000 → Renta Líquida: $175,000,000
+   - Cédula Trabajo: $600,000,000 → Renta Líquida: $505,000,000
+   - IRPF calculado automáticamente
+
+5. En Paso 3:
+   - Descarga el Formulario 210 en Excel
+
+════════════════════════════════════════════════════════════════════════════
+
+🔧 PERSONALIZACIÓN AVANZADA
+
+Para cambiar valores o tarifas, edita estos archivos:
+
+  app_declaracion_renta_2025.py:
+  ├─ VALORES_2025 → UVT, SMLV
+  ├─ clasificar_renta() → Añade nuevas palabras clave
+  └─ calcular_irpf() → Modifica tarifas
+
+  cedulas_2025.py:
+  └─ TARIFAS_IRPF → Tarifas progresivas 2025
+
+════════════════════════════════════════════════════════════════════════════
+
+🐛 SOLUCIÓN DE PROBLEMAS
+
+PROBLEMA: "streamlit command not found"
+SOLUCIÓN: pip install streamlit
+
+PROBLEMA: El archivo no se procesa
+SOLUCIÓN: Verifica que sea .xlsx o .xls y siga el formato
+
+PROBLEMA: No detecta las rentas
+SOLUCIÓN: Revisa que los conceptos contengan palabras clave
+
+════════════════════════════════════════════════════════════════════════════
+
+📞 INFORMACIÓN
+
+  Versión: 1.0
+  Año Gravable: 2025
+  País: Colombia
+  Sistema: Cedular DIAN
+
+════════════════════════════════════════════════════════════════════════════
+
+¡Listo para empezar! 🎉
+

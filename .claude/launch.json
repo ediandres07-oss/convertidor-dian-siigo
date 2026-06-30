@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "flask-app",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["app.py"],
-      "port": 5000,
-      "autoPort": true
+      "name": "declaracion-renta-2025",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["run_app.sh"],
+      "port": 8501
     }
   ]
 }

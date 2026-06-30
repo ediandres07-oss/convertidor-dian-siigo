@@ -1,0 +1,24 @@
+{
+  "contribuyente": {
+    "cedula": "44004730",
+    "nombre": "GIRALDO GARCIA ELIZABETH",
+    "ano_gravable": 2024
+  },
+  "ingresos_por_categoria": {
+    "linea_10": 1545105024.0,
+    "linea_35": 63048537.0,
+    "linea_600": 1737686311.0,
+    "linea_200": 49760028.0,
+    "linea_300": 1532146631.0
+  },
+  "total_ingresos": 4927746531.0,
+  "retenciones": 9490627.0,
+  "calculos": {
+    "deduccion": 492774653.1,
+    "base_liquida": 4434971877.9,
+    "irpf": 1461043094.823,
+    "aporte_solidario": 37205078.779,
+    "total_impuesto": 1498248173.602,
+    "saldo": 1488757546.602
+  }
+}

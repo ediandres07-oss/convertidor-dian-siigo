@@ -13,6 +13,7 @@ from retencion import calcular_retencion, generar_reporte_retenciones_excel
 import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from liquidacion_cst_2026 import LiquidacionCST, validar_datos_liquidacion
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -639,4 +640,48 @@ def consultar_cufe():
             'estado': 'error',
             'mensaje': f'Error consultando CUFE: {str(e)}'
         }, 500
+
+# ===== ENDPOINT LIQUIDACION PROFESIONAL CST 2026 =====
+@app.route('/api/liquidacion-profesional', methods=['POST'])
+def liquidacion_profesional():
+    """Calcula liquidación completa según CST 2026"""
+    try:
+        data = request.json
+        
+        # Validar datos
+        valido, mensaje = validar_datos_liquidacion(data)
+        if not valido:
+            return {'error': mensaje}, 400
+        
+        # Crear liquidación
+        liq = LiquidacionCST(
+            salario_mensual=float(data['salario']),
+            fecha_ingreso=data['fecha_ingreso'],
+            fecha_terminacion=data['fecha_terminacion'],
+            tipo_contrato=data.get('tipo_contrato', 'indefinido'),
+            tipo_terminacion=data.get('tipo_terminacion', 'sin_causa')
+        )
+        
+        # Calcular todo
+        resultado = liq.calcular_liquidacion_completa()
+        
+        return {
+            'estado': 'éxito',
+            'empleado': {
+                'fecha_ingreso': data['fecha_ingreso'],
+                'fecha_terminacion': data['fecha_terminacion']
+            },
+            'tiempo_laborado': resultado['tiempo_laborado'],
+            'cesantias': resultado['cesantias'],
+            'prima_servicios': resultado['prima_servicios'],
+            'vacaciones': resultado['vacaciones'],
+            'subtotal_prestaciones': resultado['subtotal_prestaciones'],
+            'indemnizacion': resultado['indemnizacion'],
+            'aportes_seguridad_social': resultado['aportes_seguridad_social'],
+            'total_pagable': resultado['total_pagable'],
+            'detalle': resultado['detalle']
+        }, 200
+        
+    except Exception as e:
+        return {'error': f'Error en liquidación: {str(e)}'}, 500
 
