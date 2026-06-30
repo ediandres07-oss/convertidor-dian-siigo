@@ -2,6 +2,18 @@
 <html lang="es">
 <!-- v2.5 BOTONES VISIBLES -->
 <head>
+    <script>
+        // Forzar recarga si hay nueva versión
+        const VERSION = '20260630-001';
+        const STORED = localStorage.getItem('app_version');
+        if (STORED !== VERSION) {
+            localStorage.setItem('app_version', VERSION);
+            if (STORED !== null) {
+                location.reload(true);
+            }
+        }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convertidor DIAN → Siigo | App Profesional</title>
