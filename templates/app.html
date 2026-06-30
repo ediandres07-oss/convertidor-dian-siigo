@@ -738,54 +738,34 @@
             </div>
         </div>
 
-                <div class="section" id="liquidacion" style="display: none; min-height: 400px;">
-            <div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
-                <h1 style="margin-bottom: 30px; color: var(--primary);">💼 Liquidaciones de Nómina - CST 2026</h1>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <button class="tab-btn active" onclick="showLiqTab('manual')" style="padding: 12px;">📋 Cálculo Manual</button>
-                    <button class="tab-btn" onclick="showLiqTab('archivo')" style="padding: 12px;">📁 Desde Archivo</button>
-                </div>
-
-                <div id="tab-manual" class="card" style="display: block;">
-                    <h3 style="margin-bottom: 20px; color: var(--primary);">Cálculo Detallado CST 2026</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label>Salario Mensual</label>
-                            <input type="number" id="liq-salario" placeholder="1500000">
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Ingreso</label>
-                            <input type="date" id="liq-fecha-ingreso">
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Terminación</label>
-                            <input type="date" id="liq-fecha-termino">
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo Contrato</label>
-                            <select id="liq-tipo-contrato" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-                                <option>Indefinido</option>
-                                <option>Término Fijo</option>
-                                <option>Obra/Labor</option>
-                            </select>
-                        </div>
+                        <div class="section" id="liquidacion">
+            <div style="max-width: 1000px; margin: 0 auto; padding: 40px 20px;">
+                <h1 style="color: var(--primary); margin-bottom: 20px;">💼 Liquidaciones de Nómina - CST 2026</h1>
+                
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>Cálculo Manual</h3>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Salario Mensual:</label>
+                        <input type="number" id="liq-salario" placeholder="ej: 2000000" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
                     </div>
-                    <button class="btn btn-primary" onclick="calcularLiquidacionCST()" style="width: 100%; padding: 14px;">🧮 Calcular</button>
-                    <div id="liq-resultado" style="margin-top: 20px; display: none;"></div>
-                </div>
 
-                <div id="tab-archivo" class="card" style="display: none;">
-                    <h3 style="margin-bottom: 20px; color: var(--primary);">Desde Archivo Excel</h3>
-                    <div style="margin-bottom: 16px;">
-                        <label>Archivo Excel</label>
-                        <input type="file" id="liq-archivo" accept=".xlsx,.xls" style="width: 100%; padding: 10px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha de Ingreso:</label>
+                        <input type="date" id="liq-fecha-ingreso" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
                     </div>
-                    <button class="btn btn-primary" onclick="validarLiquidacion()" style="width: 100%;">✓ Validar</button>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha de Terminación:</label>
+                        <input type="date" id="liq-fecha-termino" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="calcularLiquidacionCST()" style="width: 100%; padding: 12px; font-size: 16px;">🧮 Calcular Liquidación</button>
+                    
+                    <div id="liq-resultado" style="margin-top: 20px; padding: 20px; background: #f0f9ff; border-radius: 6px; display: none;"></div>
                 </div>
             </div>
         </div>
-
         <!-- SECTION: SIIGO -->
         <div id="siigo" class="section">
             <h2 class="section-title">Subir a Siigo Nube</h2>
@@ -1899,17 +1879,7 @@
 </script>
 
         <!-- LIQUIDACIONES NUEVA -->
-        <div class="section" id="liquidacion" style="display: none; min-height: 400px;">
-            <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
-                <h1 style="margin-bottom: 30px;">👷 Generar Liquidaciones de Nómina</h1>
-
-                <div style="background: white; border-radius: 8px; padding: 20px; border: 1px solid var(--border); margin-bottom: 20px;">
-                    <div style="margin-bottom: 16px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">📁 Archivo Excel (ejemplo_liquidacion.xlsx):</label>
-                        <input type="file" id="liq-archivo" accept=".xlsx,.xls" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 16px;">
                         <label style="font-weight: bold; display: block; margin-bottom: 6px;">🏢 Nombre Empresa:</label>
                         <input type="text" id="liq-empresa" placeholder="Mi Empresa S.A.S" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
                     </div>
