@@ -692,8 +692,7 @@ def liquidacion_profesional():
             'subtotal_prestaciones': resultado['subtotal_prestaciones'],
             'indemnizacion': resultado['indemnizacion'],
             'aportes_seguridad_social': resultado['aportes_seguridad_social'],
-            'total_pagable': resultado['total_pagable'],
-            'detalle': resultado['detalle']
+            'total_pagable': resultado['total_pagable']
         }, 200
         
     except Exception as e:
