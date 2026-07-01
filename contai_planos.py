@@ -27,11 +27,16 @@ from converter import _leer_todo, _fecha
 # ========================================
 # Cuentas contables Contai (INVERPLAS)
 # ========================================
+CTA_INGRESO_0  = '412051'      # Ingresos no gravados (sin IVA)
 CTA_INGRESO_19 = '412054'      # Ingresos gravados 19%
+CTA_INGRESO_5  = '412055'      # Ingresos gravados 5%
 CTA_IVA_19     = '24080104'    # IVA generado 19%
+CTA_IVA_5      = '24080105'    # IVA generado 5%
 CTA_CLIENTES   = '130505'      # Clientes (CxC)
-CTA_DEV_VENTAS = '417502'      # Devoluciones en ventas
-CTA_IVA_DEV    = '24080207'    # IVA en devoluciones 19%
+CTA_DEV_VENTAS    = '417502'   # Devolución en ventas 19%
+CTA_DEV_VENTAS_5  = '417503'   # Devolución en ventas 5%
+CTA_IVA_DEV    = '24080207'    # IVA en devoluciones (19% y 5%: no hay cuenta
+                               # separada confirmada para 5%, se reutiliza esta)
 
 CTA_COMPRAS_19    = '143504'   # Compras gravadas 19% (inventario)
 CTA_IVA_DESCONTAB = '240802'   # IVA descontable 19%
@@ -251,6 +256,26 @@ def _escribir_fila(ws, row_idx, fila):
             cell.number_format = '#,##0.00'
 
 
+def _clasificar_tarifa_venta(base, iva):
+    """
+    Determina la cuenta de ingreso/IVA según la tarifa efectiva de CADA
+    factura (iva/base), ya que el reporte DIAN sí trae base e IVA por
+    documento (aunque no por línea/producto). Documentos que mezclan
+    productos a 19% y 5% en una misma factura se aproximan a la tarifa
+    dominante, ya que el DIAN no discrimina por producto en un solo total.
+
+    Retorna (cuenta_ingreso, cuenta_iva_o_None).
+    """
+    if abs(base) < 0.01:
+        return CTA_INGRESO_0, None
+    rate = iva / base
+    if rate < 0.02:
+        return CTA_INGRESO_0, None
+    if rate < 0.12:
+        return CTA_INGRESO_5, CTA_IVA_5
+    return CTA_INGRESO_19, CTA_IVA_19
+
+
 def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
     """Escribe las líneas de facturas de venta y sus notas crédito."""
     # --- Facturas de venta (Comprobante 4) ---
@@ -263,17 +288,18 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
         base   = v['gravado']
         iva    = v['iva']
         total  = v['total']
+        cta_ingreso, cta_iva = _clasificar_tarifa_venta(base, iva)
 
-        # Ingreso gravado 19% (crédito)
+        # Ingreso (crédito): no gravado, 19% o 5% según la tarifa efectiva
         _escribir_fila(ws, row_idx, _fila_contai(
-            CTA_INGRESO_19, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+            cta_ingreso, COMP_VENTA, fecha, folio, nit, 'VENTAS',
             TIPO_CREDITO, base))
         row_idx += 1
 
-        # IVA generado 19% (crédito) — solo si hay IVA
-        if abs(iva) > 0.01:
+        # IVA generado (crédito) — solo si la factura tiene IVA
+        if cta_iva and abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                CTA_IVA_19, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+                cta_iva, COMP_VENTA, fecha, folio, nit, 'VENTAS',
                 TIPO_CREDITO, iva, base=base))
             row_idx += 1
 
@@ -293,15 +319,20 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
         base   = nc['gravado']
         iva    = nc['iva']
         total  = nc['total']
+        cta_ingreso, cta_iva = _clasificar_tarifa_venta(base, iva)
+        # Cuenta de devolución según tarifa. No hay cuenta confirmada para
+        # devolución de ventas no gravadas, se usa la de 19% (mejor
+        # aproximación disponible) en ese caso.
+        cta_dev = CTA_DEV_VENTAS_5 if cta_ingreso == CTA_INGRESO_5 else CTA_DEV_VENTAS
 
         # Devolución en ventas (débito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            CTA_DEV_VENTAS, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+            cta_dev, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
             TIPO_DEBITO, base))
         row_idx += 1
 
         # IVA en devoluciones (débito) — solo si hay IVA
-        if abs(iva) > 0.01:
+        if cta_iva and abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
                 CTA_IVA_DEV, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
                 TIPO_DEBITO, iva, base=base))
