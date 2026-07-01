@@ -2,12 +2,17 @@
 Generador de Planos para Contai-Ilimitada desde el reporte DIAN.
 
 Toma el mismo archivo DIAN que usa el convertidor Siigo y genera el plano de
-ventas en formato Contai-Ilimitada (contabilidad de partida doble por factura).
+ventas, compras y notas crédito de compras en formato Contai-Ilimitada
+(contabilidad de partida doble por documento).
 
-Nota: el reporte DIAN solo trae el IVA total y el total por factura, por lo que
-todas las ventas gravadas se contabilizan al 19% (cuentas 412054 / 24080104) y
-no se incluyen retenciones en la fuente. Si una factura no trae IVA, se omite la
-línea de IVA.
+Nota: el reporte DIAN solo trae el IVA total y el total por documento, por lo
+que todo se contabiliza al 19% (no se separa 19%/5%) y no se incluyen
+retenciones en la fuente. Si un documento no trae IVA, se omite la línea de IVA.
+
+Gastos/servicios NO están incluidos: a diferencia de compras (que van a una
+única cuenta de inventario), cada proveedor de gastos usa una cuenta contable
+distinta (arriendo, honorarios, servicios públicos, etc.) y ese mapeo
+NIT→cuenta específico de Contai aún no está definido.
 """
 
 import io
@@ -26,8 +31,15 @@ CTA_CLIENTES   = '130505'      # Clientes (CxC)
 CTA_DEV_VENTAS = '417502'      # Devoluciones en ventas
 CTA_IVA_DEV    = '24080207'    # IVA en devoluciones 19%
 
-COMP_VENTA  = 4                # Comprobante de venta
-COMP_DEVOL  = 16               # Comprobante de devolución
+CTA_COMPRAS_19    = '143504'   # Compras gravadas 19% (inventario)
+CTA_IVA_DESCONTAB = '240802'   # IVA descontable 19%
+CTA_PROVEEDORES   = '220505'   # Proveedores nacionales (CxP)
+CTA_DEV_COMPRAS   = '143521'   # Devolución en compras gravadas 19%
+
+COMP_VENTA   = 4               # Comprobante de venta
+COMP_DEVOL   = 16              # Comprobante de devolución (NC ventas)
+COMP_COMPRA  = 1               # Comprobante de compra
+COMP_NC_COMPRA = 2             # Comprobante de NC de compra
 
 TIPO_DEBITO  = 1
 TIPO_CREDITO = 2
@@ -86,22 +98,8 @@ def _escribir_fila(ws, row_idx, fila):
             cell.number_format = '#,##0.00'
 
 
-def generar_plano_ventas_contai(input_stream):
-    """
-    Lee el reporte DIAN y genera el plano de ventas en formato Contai.
-
-    Retorna un BytesIO con el archivo Excel listo para descargar.
-    """
-    wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
-    (_, _, _, _, ventas, nc_ventas, _, _, _, _, _, _) = _leer_todo(wb_src)
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = 'ARCHIVO PLANO'
-    _escribir_headers(ws)
-
-    row_idx = 2
-
+def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
+    """Escribe las líneas de facturas de venta y sus notas crédito."""
     # --- Facturas de venta (Comprobante 4) ---
     for v in ventas:
         if abs(v['total']) < 0.01:
@@ -162,6 +160,100 @@ def generar_plano_ventas_contai(input_stream):
             TIPO_CREDITO, total))
         row_idx += 1
 
+    return row_idx
+
+
+def _escribir_compras(ws, row_idx, compras):
+    """Escribe las líneas de facturas de compra (mercancía/inventario)."""
+    for c in compras:
+        if abs(c['total']) < 0.01:
+            continue
+        fecha  = _fmt_fecha(c['fecha'])
+        folio  = c['folio']
+        nit    = c['nit']
+        base   = c['gravado']
+        iva    = c['iva']
+        total  = c['total']
+
+        # Compras gravadas 19% (débito)
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_COMPRAS_19, COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+            TIPO_DEBITO, base))
+        row_idx += 1
+
+        # IVA descontable 19% (débito) — solo si hay IVA
+        if abs(iva) > 0.01:
+            _escribir_fila(ws, row_idx, _fila_contai(
+                CTA_IVA_DESCONTAB, COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+                TIPO_DEBITO, iva, base=base))
+            row_idx += 1
+
+        # Proveedores / CxP (crédito) por el total
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_PROVEEDORES, COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+            TIPO_CREDITO, total))
+        row_idx += 1
+
+    return row_idx
+
+
+def _escribir_nc_compras(ws, row_idx, nc_compras):
+    """Escribe las líneas de notas crédito de compra (devoluciones a proveedor)."""
+    for nc in nc_compras:
+        if abs(nc['total']) < 0.01:
+            continue
+        fecha  = _fmt_fecha(nc['fecha'])
+        folio  = nc['folio']
+        nit    = nc['nit']
+        base   = nc['gravado']
+        iva    = nc['iva']
+        total  = nc['total']
+
+        # Devolución en compras (crédito)
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_DEV_COMPRAS, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+            TIPO_CREDITO, base))
+        row_idx += 1
+
+        # IVA descontable en devolución (crédito) — solo si hay IVA
+        if abs(iva) > 0.01:
+            _escribir_fila(ws, row_idx, _fila_contai(
+                CTA_IVA_DESCONTAB, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+                TIPO_CREDITO, iva, base=base))
+            row_idx += 1
+
+        # Proveedores / CxP (débito) por el total
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_PROVEEDORES, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+            TIPO_DEBITO, total))
+        row_idx += 1
+
+    return row_idx
+
+
+def generar_plano_contai(input_stream, incluir=('ventas', 'compras', 'nc_compras')):
+    """
+    Lee el reporte DIAN y genera el plano contable completo en formato Contai
+    (ventas, compras y notas crédito de compras, según lo solicitado en
+    'incluir'). Retorna un BytesIO con el archivo Excel listo para descargar.
+    """
+    wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
+    (_, facturas_compras, _, notas_credito,
+     ventas, nc_ventas, _, _, _, _, _, _) = _leer_todo(wb_src)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'ARCHIVO PLANO'
+    _escribir_headers(ws)
+
+    row_idx = 2
+    if 'ventas' in incluir:
+        row_idx = _escribir_ventas(ws, row_idx, ventas, nc_ventas)
+    if 'compras' in incluir:
+        row_idx = _escribir_compras(ws, row_idx, facturas_compras)
+    if 'nc_compras' in incluir:
+        row_idx = _escribir_nc_compras(ws, row_idx, notas_credito)
+
     # Ajustar ancho de columnas
     anchos = [10, 12, 16, 12, 14, 14, 14, 6, 14, 14, 14, 12, 8]
     for col_idx, ancho in enumerate(anchos, 1):
@@ -171,3 +263,8 @@ def generar_plano_ventas_contai(input_stream):
     wb.save(output)
     output.seek(0)
     return output
+
+
+def generar_plano_ventas_contai(input_stream):
+    """Compatibilidad: genera solo el plano de ventas en formato Contai."""
+    return generar_plano_contai(input_stream, incluir=('ventas',))

@@ -106,8 +106,8 @@ def convert():
 
         if formato == 'contai':
             # Generar plano de ventas en formato Contai-Ilimitada
-            from contai_planos import generar_plano_ventas_contai
-            output_stream = generar_plano_ventas_contai(input_stream)
+            from contai_planos import generar_plano_contai
+            output_stream = generar_plano_contai(input_stream)
             download_name = f"PLANO_CONTAI_{original_name}.xlsx"
             return send_file(
                 output_stream,
