@@ -15,13 +15,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from liquidacion_cst_2026 import LiquidacionCST, validar_datos_liquidacion
 try:
-    from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
-    import pandas as pd
-    CONTAI_AVAILABLE = True
-except ImportError:
-    CONTAI_AVAILABLE = False
-    print("Warning: Contai module not available")
-
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 app.secret_key = 'dev-key-change-in-production'
@@ -695,14 +688,11 @@ def liquidacion_profesional():
 
 # ===== CONTAI-ILIMITADA PLANOS =====
 
-@app.route('/contai')
-@require_login
 def contai_ilimitada():
     """Página de generación de planos para Contai-Ilimitada"""
     return render_template('contai_ilimitada.html')
 
 
-@app.route('/api/contai/validar', methods=['POST'])
 def contai_validar():
     """Valida archivos de Balance y Ventas para Contai"""
     try:
@@ -751,7 +741,6 @@ def contai_validar():
         return jsonify({'error': f'Error validando: {str(e)}'}), 500
 
 
-@app.route('/api/contai/generar-plano', methods=['POST'])
 def contai_generar_plano():
     """Genera plano en formato Contai-Ilimitada"""
     try:
@@ -792,7 +781,6 @@ def contai_generar_plano():
         return jsonify({'error': f'Error: {str(e)}'}), 500
 
 
-@app.route('/api/contai/generar-balance', methods=['POST'])
 def contai_generar_balance():
     """Genera balance formateado"""
     try:

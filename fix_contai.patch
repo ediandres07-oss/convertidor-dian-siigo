@@ -1,0 +1,13 @@
+# Cambiar imports para ser más robusto
+OLD_IMPORT="from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
+import pandas as pd"
+
+NEW_IMPORT="try:
+    from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
+    import pandas as pd
+    CONTAI_ENABLED = True
+except ImportError as e:
+    print(f'Warning: contai_planos no disponible: {e}')
+    CONTAI_ENABLED = False"
+
+# Cambiar la ruta /contai para verificar si está habilitado
