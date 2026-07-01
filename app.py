@@ -821,3 +821,4 @@ def contai_generar_balance():
     except Exception as e:
         return jsonify({'error': f'Error: {str(e)}'}), 500
 
+
