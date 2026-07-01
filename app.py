@@ -14,7 +14,10 @@ import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from liquidacion_cst_2026 import LiquidacionCST, validar_datos_liquidacion
-try:
+from liquidacion_profesional_cst import LiquidacionProfesionalCST, validar_datos_liquidacion as validar_profesional
+from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
+import pandas as pd
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
 app.secret_key = 'dev-key-change-in-production'
@@ -37,6 +40,13 @@ def require_login(f):
 @require_login
 def index():
     return render_template('app.html')
+
+
+@app.route('/liquidacion-profesional')
+@require_login
+def liquidacion_profesional_ui():
+    """Página de calculadora de liquidaciones profesionales CST 2026"""
+    return render_template('liquidacion_profesional.html')
 
 
 
@@ -388,7 +398,7 @@ def upload_siigo():
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
-    app.run(debug=True, port=port, host='127.0.0.1')
+    app.run(debug=True, port=port, host='127.0.0.1', use_reloader=False)
 
 @app.route('/api/retenciones', methods=['POST'])
 def calcular_retenciones():
@@ -641,58 +651,233 @@ def consultar_cufe():
             'mensaje': f'Error consultando CUFE: {str(e)}'
         }, 500
 
-# ===== ENDPOINT LIQUIDACION PROFESIONAL CST 2026 =====
+# ===== ENDPOINT LIQUIDACION PROFESIONAL CST 2026 (MEJORADO) =====
 @app.route('/api/liquidacion-profesional', methods=['POST'])
 def liquidacion_profesional():
-    """Calcula liquidación completa según CST 2026"""
+    """Calcula liquidación completa según CST 2026 con validación profesional"""
     try:
         data = request.json
-        
+
         # Validar datos
-        valido, mensaje = validar_datos_liquidacion(data)
+        valido, mensaje = validar_profesional(data)
         if not valido:
             return {'error': mensaje}, 400
-        
-        # Crear liquidación
-        liq = LiquidacionCST(
+
+        # Crear liquidación profesional
+        liq = LiquidacionProfesionalCST(
             salario_mensual=float(data['salario']),
             fecha_ingreso=data['fecha_ingreso'],
             fecha_terminacion=data['fecha_terminacion'],
             tipo_contrato=data.get('tipo_contrato', 'indefinido'),
-            tipo_terminacion=data.get('tipo_terminacion', 'sin_causa')
+            tipo_terminacion=data.get('tipo_terminacion', 'sin_causa'),
+            regimen_cesantias=data.get('regimen_cesantias'),
+            empleado_nombre=data.get('empleado_nombre', 'N/A')
         )
-        
+
         # Calcular todo
-        resultado = liq.calcular_liquidacion_completa()
-        
+        resultado = liq.calcular_liquidacion_completa(
+            dias_retardo=int(data.get('dias_retardo', 0))
+        )
+
         return {
             'estado': 'éxito',
-            'empleado': {
-                'fecha_ingreso': data['fecha_ingreso'],
-                'fecha_terminacion': data['fecha_terminacion']
-            },
+            'empleado': data.get('empleado_nombre', 'N/A'),
             'tiempo_laborado': resultado['tiempo_laborado'],
             'cesantias': resultado['cesantias'],
             'prima_servicios': resultado['prima_servicios'],
             'vacaciones': resultado['vacaciones'],
             'subtotal_prestaciones': resultado['subtotal_prestaciones'],
             'indemnizacion': resultado['indemnizacion'],
+            'indemnizacion_moratoria': resultado['indemnizacion_moratoria'],
             'aportes_seguridad_social': resultado['aportes_seguridad_social'],
             'total_pagable': resultado['total_pagable'],
-            'detalle': resultado['detalle']
+            'smmlv_2026': resultado['smmlv_2026']
         }, 200
-        
+
     except Exception as e:
         return {'error': f'Error en liquidación: {str(e)}'}, 500
 
 
+@app.route('/api/liquidacion-profesional/markdown', methods=['POST'])
+def liquidacion_profesional_markdown():
+    """Genera reporte en Markdown de liquidación CST 2026"""
+    try:
+        data = request.json
+
+        # Validar datos
+        valido, mensaje = validar_profesional(data)
+        if not valido:
+            return {'error': mensaje}, 400
+
+        # Crear liquidación profesional
+        liq = LiquidacionProfesionalCST(
+            salario_mensual=float(data['salario']),
+            fecha_ingreso=data['fecha_ingreso'],
+            fecha_terminacion=data['fecha_terminacion'],
+            tipo_contrato=data.get('tipo_contrato', 'indefinido'),
+            tipo_terminacion=data.get('tipo_terminacion', 'sin_causa'),
+            regimen_cesantias=data.get('regimen_cesantias'),
+            empleado_nombre=data.get('empleado_nombre', '{empleado}')
+        )
+
+        # Generar reporte Markdown
+        reporte_md = liq.generar_reporte_markdown(
+            dias_retardo=int(data.get('dias_retardo', 0))
+        )
+
+        return {
+            'estado': 'éxito',
+            'reporte': reporte_md,
+            'formato': 'markdown'
+        }, 200
+
+    except Exception as e:
+        return {'error': f'Error generando reporte: {str(e)}'}, 500
+
+
+@app.route('/api/liquidacion-profesional/guardar', methods=['POST'])
+def guardar_liquidacion():
+    """Guarda liquidación calculada y la integra con SIIGO"""
+    try:
+        data = request.json
+
+        # Validar datos
+        valido, mensaje = validar_profesional(data)
+        if not valido:
+            return {'error': mensaje}, 400
+
+        # Crear liquidación
+        liq = LiquidacionProfesionalCST(
+            salario_mensual=float(data['salario']),
+            fecha_ingreso=data['fecha_ingreso'],
+            fecha_terminacion=data['fecha_terminacion'],
+            tipo_contrato=data.get('tipo_contrato', 'indefinido'),
+            tipo_terminacion=data.get('tipo_terminacion', 'sin_causa'),
+            regimen_cesantias=data.get('regimen_cesantias'),
+            empleado_nombre=data.get('empleado_nombre', 'N/A')
+        )
+
+        # Calcular liquidación completa
+        resultado = liq.calcular_liquidacion_completa(
+            dias_retardo=int(data.get('dias_retardo', 0))
+        )
+
+        # Guardar en JSON
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        cedula = data.get('cedula', 'NA')
+        filename = f"liquidacion_{cedula}_{timestamp}.json"
+
+        liquidacion_data = {
+            'empleado': {
+                'cedula': cedula,
+                'nombre': data.get('empleado_nombre', 'N/A'),
+                'salario': data['salario']
+            },
+            'periodo': {
+                'fecha_ingreso': data['fecha_ingreso'],
+                'fecha_terminacion': data['fecha_terminacion']
+            },
+            'tipo_contrato': data.get('tipo_contrato', 'indefinido'),
+            'tipo_terminacion': data.get('tipo_terminacion', 'sin_causa'),
+            'resultado': resultado,
+            'fecha_generacion': datetime.now().isoformat(),
+            'reporte_markdown': liq.generar_reporte_markdown(
+                dias_retardo=int(data.get('dias_retardo', 0))
+            )
+        }
+
+        # Guardar archivo
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(liquidacion_data, f, indent=2, ensure_ascii=False)
+
+        return {
+            'estado': 'éxito',
+            'mensaje': f'Liquidación guardada en {filename}',
+            'archivo': filename,
+            'total_pagable': resultado['total_pagable'],
+            'cedula': cedula
+        }, 200
+
+    except Exception as e:
+        return {'error': f'Error guardando liquidación: {str(e)}'}, 500
+
+
+@app.route('/api/liquidacion-profesional/lote', methods=['POST'])
+def liquidacion_lote():
+    """Procesa múltiples liquidaciones en lote"""
+    try:
+        data = request.json
+        empleados = data.get('empleados', [])
+
+        if not empleados:
+            return {'error': 'No se proporcionó lista de empleados'}, 400
+
+        resultados = []
+
+        for emp in empleados:
+            try:
+                # Validar cada empleado
+                valido, msg = validar_profesional(emp)
+                if not valido:
+                    resultados.append({
+                        'cedula': emp.get('cedula', 'N/A'),
+                        'estado': 'error',
+                        'error': msg
+                    })
+                    continue
+
+                # Calcular liquidación
+                liq = LiquidacionProfesionalCST(
+                    salario_mensual=float(emp['salario']),
+                    fecha_ingreso=emp['fecha_ingreso'],
+                    fecha_terminacion=emp['fecha_terminacion'],
+                    tipo_contrato=emp.get('tipo_contrato', 'indefinido'),
+                    tipo_terminacion=emp.get('tipo_terminacion', 'sin_causa'),
+                    regimen_cesantias=emp.get('regimen_cesantias'),
+                    empleado_nombre=emp.get('empleado_nombre', 'N/A')
+                )
+
+                resultado = liq.calcular_liquidacion_completa()
+
+                resultados.append({
+                    'cedula': emp.get('cedula', 'N/A'),
+                    'nombre': emp.get('empleado_nombre', 'N/A'),
+                    'estado': 'éxito',
+                    'total_pagable': resultado['total_pagable'],
+                    'cesantias': resultado['cesantias']['total'],
+                    'prima': resultado['prima_servicios']['total'],
+                    'vacaciones': resultado['vacaciones']['total'],
+                    'indemnizacion': resultado['indemnizacion']['total']
+                })
+
+            except Exception as e:
+                resultados.append({
+                    'cedula': emp.get('cedula', 'N/A'),
+                    'estado': 'error',
+                    'error': str(e)
+                })
+
+        return {
+            'estado': 'procesado',
+            'total_empleados': len(empleados),
+            'procesados_exitosamente': sum(1 for r in resultados if r['estado'] == 'éxito'),
+            'resultados': resultados
+        }, 200
+
+    except Exception as e:
+        return {'error': f'Error procesando lote: {str(e)}'}, 500
+
+
 # ===== CONTAI-ILIMITADA PLANOS =====
 
+@app.route('/contai')
+@require_login
 def contai_ilimitada():
     """Página de generación de planos para Contai-Ilimitada"""
     return render_template('contai_ilimitada.html')
 
 
+@app.route('/api/contai/validar', methods=['POST'])
 def contai_validar():
     """Valida archivos de Balance y Ventas para Contai"""
     try:
@@ -741,6 +926,7 @@ def contai_validar():
         return jsonify({'error': f'Error validando: {str(e)}'}), 500
 
 
+@app.route('/api/contai/generar-plano', methods=['POST'])
 def contai_generar_plano():
     """Genera plano en formato Contai-Ilimitada"""
     try:
@@ -781,6 +967,7 @@ def contai_generar_plano():
         return jsonify({'error': f'Error: {str(e)}'}), 500
 
 
+@app.route('/api/contai/generar-balance', methods=['POST'])
 def contai_generar_balance():
     """Genera balance formateado"""
     try:
@@ -813,5 +1000,4 @@ def contai_generar_balance():
 
     except Exception as e:
         return jsonify({'error': f'Error: {str(e)}'}), 500
-
 
