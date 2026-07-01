@@ -14,8 +14,13 @@ import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from liquidacion_cst_2026 import LiquidacionCST, validar_datos_liquidacion
-# from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
-# import pandas as pd
+try:
+    from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
+    import pandas as pd
+    CONTAI_AVAILABLE = True
+except ImportError:
+    CONTAI_AVAILABLE = False
+    print("Warning: Contai module not available")
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
