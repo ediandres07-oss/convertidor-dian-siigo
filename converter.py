@@ -267,13 +267,42 @@ def _insert_table(ws, sheet_name, start_row=1, end_row=None):
 # LECTURA DE LA HOJA REPORTE
 # ========================================
 
+def _detectar_columnas_dian_std(ws):
+    """
+    Detecta el formato 'dian_std': hoja con encabezados nombrados (Tipo de
+    documento, Folio, NIT Emisor, NIT Receptor, BASE, IVA, Total, ...) en vez
+    de columnas en posiciones fijas. Es el layout que exporta la DIAN cuando
+    se descarga un reporte de documentos recibidos/emitidos con nombre de
+    hoja libre (no 'REPORTE' ni 'Rp_*').
+
+    Retorna un dict {nombre_columna_en_minúsculas: índice_0based} si coincide,
+    o None si la hoja no tiene esta estructura.
+    """
+    header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+    if not header_row:
+        return None
+    idx = {}
+    for i, h in enumerate(header_row):
+        if h is None:
+            continue
+        idx[str(h).strip().lower()] = i
+    requeridos = ['tipo de documento', 'folio', 'nit emisor', 'nit receptor', 'base', 'iva', 'total']
+    if all(r in idx for r in requeridos):
+        return idx
+    return None
+
+
 def _detect_format_name(wb_src):
-    """Detecta el nombre de la hoja y el formato ('reporte' o 'nuevo')."""
+    """Detecta el nombre de la hoja y el formato ('reporte', 'dian_std' o 'nuevo')."""
     if 'REPORTE' in wb_src.sheetnames:
         return 'reporte', 'REPORTE'
     for name in wb_src.sheetnames:
         if name.startswith('Rp_'):
             return 'nuevo', name
+    # Formato DIAN por nombres de columna, con hoja de nombre libre
+    for name in wb_src.sheetnames:
+        if _detectar_columnas_dian_std(wb_src[name]) is not None:
+            return 'dian_std', name
     # Fallback: primera hoja
     name = wb_src.sheetnames[0]
     return 'nuevo', name
@@ -804,6 +833,7 @@ def _leer_todo(wb_src):
     from collections import Counter
     fmt, sheet_name = _detect_format_name(wb_src)
     ws = wb_src[sheet_name]
+    idx_std = _detectar_columnas_dian_std(ws) if fmt == 'dian_std' else None
 
     EXCLUIDOS = {'222222222222', '0', '', 'None', 'none'}
 
@@ -831,6 +861,12 @@ def _leer_todo(wb_src):
                 continue
             nit_emisor   = str(row[5] or '').strip()
             nit_receptor = str(row[7] or '').strip()
+            nits_encontrados = [nit_emisor, nit_receptor]
+        elif fmt == 'dian_std':
+            if len(row) <= max(idx_std['nit emisor'], idx_std['nit receptor']):
+                continue
+            nit_emisor   = str(row[idx_std['nit emisor']] or '').strip()
+            nit_receptor = str(row[idx_std['nit receptor']] or '').strip()
             nits_encontrados = [nit_emisor, nit_receptor]
         else:
             # Formato nuevo: buscar NITs en columnas esperadas primero
@@ -883,6 +919,24 @@ def _leer_todo(wb_src):
             nit_cliente  = nit_receptor
             nombre       = ''
             grupo        = str(row[14] or '').strip() if len(row) > 14 else ''
+        elif fmt == 'dian_std':
+            max_idx = max(idx_std.values())
+            if len(row) <= max_idx:
+                continue
+            tipo         = str(row[idx_std['tipo de documento']] or '').lower()
+            folio        = row[idx_std['folio']]
+            fecha        = _fecha(row[idx_std['fecha emisión']]) if 'fecha emisión' in idx_std else None
+            nit_emisor   = str(row[idx_std['nit emisor']] or '').strip()
+            nombre_emisor = str(row[idx_std['nombre emisor']] or '').strip() if 'nombre emisor' in idx_std else ''
+            nit_receptor = str(row[idx_std['nit receptor']] or '').strip()
+            nombre_receptor = str(row[idx_std['nombre receptor']] or '').strip() if 'nombre receptor' in idx_std else ''
+            nombre       = nombre_receptor
+            iva          = _n(row[idx_std['iva']])
+            total        = _n(row[idx_std['total']])
+            no_gravado   = 0.0
+            gravado_raw  = _n(row[idx_std['base']])
+            nit_cliente  = nit_receptor
+            grupo        = ''
         else:
             if len(row) < 14:
                 continue
