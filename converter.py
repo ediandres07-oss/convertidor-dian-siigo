@@ -960,7 +960,6 @@ def _leer_todo(wb_src):
         base_r  = round(total_r - iva_r, 2)   # base exacta para balancear
 
         es_nc      = 'nota de cr' in tipo
-        es_factura = 'factura'    in tipo
 
         # Clasificación Emitido/Recibido: la columna "Grupo" de la DIAN es
         # la fuente oficial. Si no existe, se infiere por NIT. Esto evita
@@ -1000,7 +999,11 @@ def _leer_todo(wb_src):
                 nc_ventas.append(vdoc)
                 base_nc_ventas += base_r; iva_nc_ventas += iva_r
                 if fecha: fechas_venta.append(fecha)
-            elif es_factura:
+            else:
+                # Cualquier documento emitido que no sea nota de crédito
+                # cuenta como venta: factura electrónica, documento
+                # equivalente POS, etc. (igual que en compras/gastos, que
+                # ya aceptan cualquier tipo no-NC).
                 ventas.append(vdoc)
                 base_ventas += base_r; iva_ventas += iva_r
                 if fecha: fechas_venta.append(fecha)

@@ -264,13 +264,16 @@ def _clasificar_tarifa_venta(base, iva):
     productos a 19% y 5% en una misma factura se aproximan a la tarifa
     dominante, ya que el DIAN no discrimina por producto en un solo total.
 
+    La cuenta de IVA solo es None cuando el IVA es realmente ~0 (venta no
+    gravada) — si hay IVA aunque su tarifa efectiva no sea exactamente
+    19% o 5%, igual se escribe (a la cuenta más cercana) para no perder
+    el valor y descuadrar el plano.
+
     Retorna (cuenta_ingreso, cuenta_iva_o_None).
     """
-    if abs(base) < 0.01:
+    if abs(iva) < 0.01:
         return CTA_INGRESO_0, None
-    rate = iva / base
-    if rate < 0.02:
-        return CTA_INGRESO_0, None
+    rate = iva / base if abs(base) > 0.01 else 1.0
     if rate < 0.12:
         return CTA_INGRESO_5, CTA_IVA_5
     return CTA_INGRESO_19, CTA_IVA_19
