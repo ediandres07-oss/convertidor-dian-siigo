@@ -1,226 +1,173 @@
 """
-Generador de Planos para Contai-Ilimitada
-Convierte archivos de Balance y Ventas a formato compatible
+Generador de Planos para Contai-Ilimitada desde el reporte DIAN.
+
+Toma el mismo archivo DIAN que usa el convertidor Siigo y genera el plano de
+ventas en formato Contai-Ilimitada (contabilidad de partida doble por factura).
+
+Nota: el reporte DIAN solo trae el IVA total y el total por factura, por lo que
+todas las ventas gravadas se contabilizan al 19% (cuentas 412054 / 24080104) y
+no se incluyen retenciones en la fuente. Si una factura no trae IVA, se omite la
+línea de IVA.
 """
 
+import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from pathlib import Path
-import pandas as pd
-from datetime import datetime
-import io
+
+from converter import _leer_todo, _fecha
 
 
-class ContaiPlanoGenerator:
-    """Genera planos en formato Contai-Ilimitada desde Excel"""
+# ========================================
+# Cuentas contables Contai (INVERPLAS)
+# ========================================
+CTA_INGRESO_19 = '412054'      # Ingresos gravados 19%
+CTA_IVA_19     = '24080104'    # IVA generado 19%
+CTA_CLIENTES   = '130505'      # Clientes (CxC)
+CTA_DEV_VENTAS = '417502'      # Devoluciones en ventas
+CTA_IVA_DEV    = '24080207'    # IVA en devoluciones 19%
 
-    THIN_BORDER = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
+COMP_VENTA  = 4                # Comprobante de venta
+COMP_DEVOL  = 16               # Comprobante de devolución
 
-    HEADER_FILL = PatternFill(start_color="1a3a5c", end_color="1a3a5c", fill_type="solid")
-    HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
+TIPO_DEBITO  = 1
+TIPO_CREDITO = 2
 
-    def __init__(self, balance_path=None, ventas_path=None):
-        self.balance_path = balance_path
-        self.ventas_path = ventas_path
-        self.balance_data = None
-        self.ventas_data = None
+HEADERS_CONTAI = [
+    'Cuenta', 'Comprobante', 'Fecha(mm/dd/yyyy)', 'Comprobante', 'Documento Ref.',
+    'Nit', 'Detalle', 'Tipo', 'VALORES', 'BASE', 'Centro de Costo',
+    'Trans. Ext', 'Plazo'
+]
 
-    def cargar_balance(self):
-        """Carga balance de prueba desde Excel"""
-        if not self.balance_path:
-            return False
+_HEADER_FILL = PatternFill(fill_type='solid', fgColor='1a3a5c')
+_HEADER_FONT = Font(bold=True, color='FFFFFF', name='Calibri', size=10)
+_THIN_BORDER = Border(
+    left=Side(style='thin', color='BFCCD8'),
+    right=Side(style='thin', color='BFCCD8'),
+    top=Side(style='thin', color='BFCCD8'),
+    bottom=Side(style='thin', color='BFCCD8')
+)
 
-        try:
-            df = pd.read_excel(self.balance_path, sheet_name='Datos', skiprows=3)
-            self.balance_data = df
-            return True
-        except Exception as e:
-            print(f"Error cargando balance: {e}")
-            return False
 
-    def cargar_ventas(self):
-        """Carga plano de ventas desde Excel"""
-        if not self.ventas_path:
-            return False
+def _fmt_fecha(val):
+    """Devuelve la fecha en formato dd-mm-yyyy (como en el plano Contai)."""
+    f = _fecha(val)
+    try:
+        return f.strftime('%d-%m-%Y')
+    except AttributeError:
+        return str(val) if val is not None else ''
 
-        try:
-            df = pd.read_excel(self.ventas_path, sheet_name=0)
-            self.ventas_data = df
-            return True
-        except Exception as e:
-            print(f"Error cargando ventas: {e}")
-            return False
 
-    def generar_plano_contai(self):
-        """Genera archivo plano en formato Contai-Ilimitada"""
-        if self.ventas_data is None:
-            return None
+def _fila_contai(cuenta, comp, fecha, folio, nit, detalle, tipo, valores, base=None):
+    """Construye una fila del plano Contai (13 columnas)."""
+    return [
+        cuenta, comp, fecha, folio, folio,
+        str(nit) if nit else None, detalle, tipo, round(valores, 2),
+        round(base, 2) if base is not None else None,
+        None, None, None
+    ]
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Plano Contai"
 
-        # Headers
-        headers = [
-            'Cuenta', 'Comprobante', 'Fecha', 'Documento Ref',
-            'NIT', 'Detalle', 'Tipo', 'VALORES', 'BASE',
-            'Centro de Costo', 'Transacciones Externas', 'Plazo'
-        ]
+def _escribir_headers(ws):
+    for col, header in enumerate(HEADERS_CONTAI, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = _HEADER_FILL
+        cell.font = _HEADER_FONT
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = _THIN_BORDER
+    ws.row_dimensions[1].height = 20
 
-        for col_idx, header in enumerate(headers, 1):
-            cell = ws.cell(1, col_idx)
-            cell.value = header
-            cell.font = self.HEADER_FONT
-            cell.fill = self.HEADER_FILL
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = self.THIN_BORDER
 
-        # Datos
-        row_idx = 2
-        for _, row in self.ventas_data.iterrows():
-            for col_idx, header in enumerate(headers, 1):
-                cell = ws.cell(row_idx, col_idx)
+def _escribir_fila(ws, row_idx, fila):
+    for col, val in enumerate(fila, 1):
+        cell = ws.cell(row=row_idx, column=col, value=val)
+        cell.border = _THIN_BORDER
+        # Formato numérico para VALORES (col 9) y BASE (col 10)
+        if col in (9, 10) and isinstance(val, (int, float)):
+            cell.number_format = '#,##0.00'
 
-                if header == 'Cuenta':
-                    cell.value = row.get('Cuenta', '')
-                elif header == 'Comprobante':
-                    cell.value = row.get('Comprobante', '')
-                elif header == 'Fecha':
-                    cell.value = row.get('Fecha(mm/dd/yyyy)', '')
-                elif header == 'Documento Ref':
-                    cell.value = row.get('Documento Ref.', '')
-                elif header == 'NIT':
-                    cell.value = row.get('Nit', '')
-                elif header == 'Detalle':
-                    cell.value = row.get('Detalle', '')
-                elif header == 'Tipo':
-                    cell.value = row.get('Tipo', '')
-                elif header == 'VALORES':
-                    cell.value = row.get('VALORES', '')
-                    cell.number_format = '#,##0.00'
-                elif header == 'BASE':
-                    cell.value = row.get('BASE', '')
-                    cell.number_format = '#,##0.00'
-                elif header == 'Centro de Costo':
-                    cell.value = row.get('Centro de Costo', '')
-                elif header == 'Transacciones Externas':
-                    cell.value = row.get('Trans. Ext', '')
-                elif header == 'Plazo':
-                    cell.value = row.get('Plazo', '')
 
-                cell.border = self.THIN_BORDER
-                cell.alignment = Alignment(horizontal="left", vertical="center")
+def generar_plano_ventas_contai(input_stream):
+    """
+    Lee el reporte DIAN y genera el plano de ventas en formato Contai.
 
+    Retorna un BytesIO con el archivo Excel listo para descargar.
+    """
+    wb_src = openpyxl.load_workbook(input_stream, data_only=True, read_only=True)
+    (_, _, _, _, ventas, nc_ventas, _, _, _, _, _, _) = _leer_todo(wb_src)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'ARCHIVO PLANO'
+    _escribir_headers(ws)
+
+    row_idx = 2
+
+    # --- Facturas de venta (Comprobante 4) ---
+    for v in ventas:
+        if abs(v['total']) < 0.01:
+            continue
+        fecha  = _fmt_fecha(v['fecha'])
+        folio  = v['folio']
+        nit    = v['nit']
+        base   = v['gravado']
+        iva    = v['iva']
+        total  = v['total']
+
+        # Ingreso gravado 19% (crédito)
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_INGRESO_19, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+            TIPO_CREDITO, base))
+        row_idx += 1
+
+        # IVA generado 19% (crédito) — solo si hay IVA
+        if abs(iva) > 0.01:
+            _escribir_fila(ws, row_idx, _fila_contai(
+                CTA_IVA_19, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+                TIPO_CREDITO, iva, base=base))
             row_idx += 1
 
-        # Auto-ajustar columnas
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(cell.value)
-                except:
-                    pass
-            adjusted_width = (max_length + 2)
-            ws.column_dimensions[column].width = min(adjusted_width, 50)
+        # Clientes / CxC (débito) por el total
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_CLIENTES, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+            TIPO_DEBITO, total))
+        row_idx += 1
 
-        # Guardar a bytes
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        return output
+    # --- Notas crédito / devoluciones (Comprobante 16) ---
+    for nc in nc_ventas:
+        if abs(nc['total']) < 0.01:
+            continue
+        fecha  = _fmt_fecha(nc['fecha'])
+        folio  = nc['folio']
+        nit    = nc['nit']
+        base   = nc['gravado']
+        iva    = nc['iva']
+        total  = nc['total']
 
-    def generar_reporte_balance(self):
-        """Genera reporte formateado del balance de prueba"""
-        if self.balance_data is None:
-            return None
+        # Devolución en ventas (débito)
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_DEV_VENTAS, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+            TIPO_DEBITO, base))
+        row_idx += 1
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Balance Formateado"
+        # IVA en devoluciones (débito) — solo si hay IVA
+        if abs(iva) > 0.01:
+            _escribir_fila(ws, row_idx, _fila_contai(
+                CTA_IVA_DEV, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+                TIPO_DEBITO, iva, base=base))
+            row_idx += 1
 
-        # Encabezado
-        ws['A1'] = "BALANCE DE PRUEBA"
-        ws['A1'].font = Font(bold=True, size=14, color="FFFFFF")
-        ws['A1'].fill = self.HEADER_FILL
-        ws.merge_cells('A1:I1')
-        ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+        # Clientes / CxC (crédito) por el total
+        _escribir_fila(ws, row_idx, _fila_contai(
+            CTA_CLIENTES, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+            TIPO_CREDITO, total))
+        row_idx += 1
 
-        # Fecha
-        ws['A2'] = f"Generado: {datetime.now().strftime('%d-%m-%Y')}"
-        ws.merge_cells('A2:I2')
+    # Ajustar ancho de columnas
+    anchos = [10, 12, 16, 12, 14, 14, 14, 6, 14, 14, 14, 12, 8]
+    for col_idx, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = ancho
 
-        # Copiar datos con formato
-        headers = self.balance_data.columns.tolist()
-
-        for col_idx, header in enumerate(headers, 1):
-            cell = ws.cell(4, col_idx)
-            cell.value = header
-            cell.font = self.HEADER_FONT
-            cell.fill = self.HEADER_FILL
-            cell.border = self.THIN_BORDER
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        for row_idx, row in enumerate(self.balance_data.itertuples(index=False), 5):
-            for col_idx, value in enumerate(row, 1):
-                cell = ws.cell(row_idx, col_idx)
-                cell.value = value
-                cell.border = self.THIN_BORDER
-
-                # Formatear números
-                if col_idx > 2:  # Columnas numéricas
-                    try:
-                        if isinstance(value, (int, float)):
-                            cell.number_format = '#,##0.00'
-                    except:
-                        pass
-
-        # Auto-ajustar
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(cell.value)
-                except:
-                    pass
-            ws.column_dimensions[column].width = min(max_length + 2, 50)
-
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        return output
-
-
-def validar_archivos_contai(balance_path, ventas_path):
-    """Valida que los archivos sean válidos para Contai"""
-    errores = []
-
-    try:
-        balance_df = pd.read_excel(balance_path, sheet_name='Datos', skiprows=3)
-        if balance_df.empty:
-            errores.append("Balance vacío")
-    except Exception as e:
-        errores.append(f"Balance inválido: {str(e)}")
-
-    try:
-        ventas_df = pd.read_excel(ventas_path, sheet_name=0)
-        if ventas_df.empty:
-            errores.append("Plano de ventas vacío")
-
-        required_cols = ['Cuenta', 'Nit', 'VALORES']
-        missing = [col for col in required_cols if col not in ventas_df.columns]
-        if missing:
-            errores.append(f"Columnas faltantes en ventas: {', '.join(missing)}")
-    except Exception as e:
-        errores.append(f"Ventas inválido: {str(e)}")
-
-    return len(errores) == 0, errores
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output

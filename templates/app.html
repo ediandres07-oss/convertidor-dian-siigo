@@ -643,7 +643,8 @@
                     <button class="btn btn-primary" onclick="showSection('liquidacion')" style="width: 100%;">
                         💼 Liquidaciones
                     </button>
-                    <button class="btn btn-primary" onclick="window.location.href='/contai'" style="width: 100%;">
+                    <button class="btn btn-primary" onclick="showSection('convertidor')" style="width: 100%;">
+                        📊 Contai-Ilimitada
                     </button>
                 </div>
             </div>
@@ -694,6 +695,23 @@
                 </div>
 
                 <div class="alert alert-success" id="message-container"></div>
+            </div>
+        </div>
+
+        <!-- MODAL: Elegir formato de plano -->
+        <div id="modalFormato" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:var(--card-bg, #fff); padding:28px; border-radius:12px; max-width:440px; width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+                <h3 style="margin:0 0 8px; font-size:18px;">¿A qué formato quieres generar el plano?</h3>
+                <p style="margin:0 0 20px; font-size:13px; color:var(--text-light);">Elige el sistema contable de destino.</p>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="btn btn-primary" onclick="generarPlano('siigo')" style="width:100%; padding:14px; font-size:15px;">
+                        📗 Siigo <span style="font-weight:400; font-size:12px; opacity:0.85;">— compras, gastos, NC y ventas</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="generarPlano('contai')" style="width:100%; padding:14px; font-size:15px; background:#1a3a5c;">
+                        📘 Contai-Ilimitada <span style="font-weight:400; font-size:12px; opacity:0.85;">— plano de ventas</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="cerrarModalFormato()" style="width:100%;">Cancelar</button>
+                </div>
             </div>
         </div>
 
@@ -951,7 +969,22 @@
         }
 
         // Funciones de API
-        async function convertirDIAN() {
+        function convertirDIAN() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                showAlert('message-container', 'Selecciona un archivo', 'danger');
+                return;
+            }
+            // Preguntar formato de salida antes de generar
+            document.getElementById('modalFormato').style.display = 'flex';
+        }
+
+        function cerrarModalFormato() {
+            document.getElementById('modalFormato').style.display = 'none';
+        }
+
+        async function generarPlano(formato) {
+            cerrarModalFormato();
             const file = document.getElementById('fileInput').files[0];
             if (!file) {
                 showAlert('message-container', 'Selecciona un archivo', 'danger');
@@ -960,14 +993,18 @@
 
             const fd = new FormData();
             fd.append('file', file);
+            fd.append('formato', formato);
             fd.append('consec_compras', document.getElementById('consec_compras').value || '371');
             fd.append('consec_nc', document.getElementById('consec_nc').value || '271');
             fd.append('consec_gastos', document.getElementById('consec_gastos').value || '798');
             fd.append('consec_ventas', document.getElementById('consec_ventas').value || '1');
             fd.append('consec_nc_ventas', '1');
 
+            const etiqueta = formato === 'contai' ? 'Contai-Ilimitada' : 'Siigo';
+            const nombreArchivo = formato === 'contai' ? 'PLANO_CONTAI.xlsx' : 'PLANOS.xlsx';
+
             try {
-                showAlert('message-container', '⏳ Procesando archivo... esto puede tardar varios minutos (archivos grandes)', 'warning');
+                showAlert('message-container', `⏳ Generando plano ${etiqueta}... esto puede tardar varios minutos (archivos grandes)`, 'warning');
                 const res = await fetch('/api/convert', { method: 'POST', body: fd });
                 if (!res.ok) {
                     const text = await res.text();
@@ -975,8 +1012,8 @@
                 }
 
                 const blob = await res.blob();
-                downloadFile(blob, 'PLANOS.xlsx');
-                showAlert('message-container', '✅ Planos generados correctamente. Descargando...', 'success');
+                downloadFile(blob, nombreArchivo);
+                showAlert('message-container', `✅ Plano ${etiqueta} generado correctamente. Descargando...`, 'success');
             } catch (err) {
                 showAlert('message-container', `❌ ${err.message}`, 'danger');
             }

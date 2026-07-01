@@ -6,6 +6,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["run_app.sh"],
       "port": 8501
+    },
+    {
+      "name": "flask-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["run_app.py"],
+      "port": 8080
     }
   ]
 }

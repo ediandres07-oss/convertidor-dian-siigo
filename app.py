@@ -97,11 +97,26 @@ def convert():
     except ValueError:
         return {'error': 'Los consecutivos deben ser números válidos'}, 400
 
+    formato = request.form.get('formato', 'siigo').strip().lower()
+
     try:
         # Leer el archivo en memoria
         input_stream = io.BytesIO(file.read())
+        original_name = file.filename.rsplit('.', 1)[0]
 
-        # Procesar el archivo
+        if formato == 'contai':
+            # Generar plano de ventas en formato Contai-Ilimitada
+            from contai_planos import generar_plano_ventas_contai
+            output_stream = generar_plano_ventas_contai(input_stream)
+            download_name = f"PLANO_CONTAI_{original_name}.xlsx"
+            return send_file(
+                output_stream,
+                as_attachment=True,
+                download_name=download_name,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        # Procesar el archivo (formato Siigo por defecto)
         output_stream = process_file(
             input_stream,
             consec_compras=consec_compras,
@@ -111,7 +126,6 @@ def convert():
             consec_nc_ventas=consec_nc_ventas
         )
 
-        original_name = file.filename.rsplit('.', 1)[0]
         download_name = f"PLANOS_{original_name}.xlsx"
 
         return send_file(
