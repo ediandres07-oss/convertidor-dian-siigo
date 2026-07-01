@@ -14,6 +14,8 @@ import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from liquidacion_cst_2026 import LiquidacionCST, validar_datos_liquidacion
+from contai_planos import ContaiPlanoGenerator, validar_archivos_contai
+import pandas as pd
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB máximo
@@ -684,4 +686,138 @@ def liquidacion_profesional():
         
     except Exception as e:
         return {'error': f'Error en liquidación: {str(e)}'}, 500
+
+
+# ===== CONTAI-ILIMITADA PLANOS =====
+
+@app.route('/contai')
+@require_login
+def contai_ilimitada():
+    """Página de generación de planos para Contai-Ilimitada"""
+    return render_template('contai_ilimitada.html')
+
+
+@app.route('/api/contai/validar', methods=['POST'])
+def contai_validar():
+    """Valida archivos de Balance y Ventas para Contai"""
+    try:
+        if 'balance' not in request.files or 'ventas' not in request.files:
+            return jsonify({'error': 'Se requieren ambos archivos (balance y ventas)'}), 400
+
+        balance_file = request.files['balance']
+        ventas_file = request.files['ventas']
+
+        if not balance_file or not ventas_file:
+            return jsonify({'error': 'Archivos vacíos'}), 400
+
+        # Guardar temporalmente
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as f_balance:
+            balance_file.save(f_balance.name)
+            balance_path = f_balance.name
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as f_ventas:
+            ventas_file.save(f_ventas.name)
+            ventas_path = f_ventas.name
+
+        # Validar
+        valido, errores = validar_archivos_contai(balance_path, ventas_path)
+        if not valido:
+            return jsonify({'error': '\n'.join(errores)}), 400
+
+        # Cargar datos
+        generator = ContaiPlanoGenerator(balance_path, ventas_path)
+        generator.cargar_balance()
+        generator.cargar_ventas()
+
+        # Preview de datos
+        balance_preview = generator.balance_data.head(10).to_dict('records') if generator.balance_data is not None else []
+        ventas_preview = generator.ventas_data.head(10).to_dict('records') if generator.ventas_data is not None else []
+
+        return jsonify({
+            'success': True,
+            'balance_count': len(generator.balance_data) if generator.balance_data is not None else 0,
+            'ventas_count': len(generator.ventas_data) if generator.ventas_data is not None else 0,
+            'balance_preview': balance_preview,
+            'ventas_preview': ventas_preview
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Error validando: {str(e)}'}), 500
+
+
+@app.route('/api/contai/generar-plano', methods=['POST'])
+def contai_generar_plano():
+    """Genera plano en formato Contai-Ilimitada"""
+    try:
+        if 'balance' not in request.files or 'ventas' not in request.files:
+            return jsonify({'error': 'Se requieren ambos archivos'}), 400
+
+        balance_file = request.files['balance']
+        ventas_file = request.files['ventas']
+
+        # Guardar temporalmente
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as f_balance:
+            balance_file.save(f_balance.name)
+            balance_path = f_balance.name
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as f_ventas:
+            ventas_file.save(f_ventas.name)
+            ventas_path = f_ventas.name
+
+        # Generar
+        generator = ContaiPlanoGenerator(balance_path, ventas_path)
+        generator.cargar_balance()
+        generator.cargar_ventas()
+
+        plano_bytes = generator.generar_plano_contai()
+
+        if plano_bytes is None:
+            return jsonify({'error': 'Error generando plano'}), 400
+
+        return send_file(
+            plano_bytes,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'plano_contai_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+
+    except Exception as e:
+        return jsonify({'error': f'Error: {str(e)}'}), 500
+
+
+@app.route('/api/contai/generar-balance', methods=['POST'])
+def contai_generar_balance():
+    """Genera balance formateado"""
+    try:
+        if 'balance' not in request.files:
+            return jsonify({'error': 'Se requiere el archivo de balance'}), 400
+
+        balance_file = request.files['balance']
+
+        # Guardar temporalmente
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as f_balance:
+            balance_file.save(f_balance.name)
+            balance_path = f_balance.name
+
+        # Generar
+        generator = ContaiPlanoGenerator(balance_path)
+        generator.cargar_balance()
+
+        balance_bytes = generator.generar_reporte_balance()
+
+        if balance_bytes is None:
+            return jsonify({'error': 'Error generando balance'}), 400
+
+        return send_file(
+            balance_bytes,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'balance_formateado_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+
+    except Exception as e:
+        return jsonify({'error': f'Error: {str(e)}'}), 500
 

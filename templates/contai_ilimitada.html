@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contai-Ilimitada Planos | DIAN Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a3a5c;
+            --secondary: #2980b9;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--light);
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 16px;
+        }
+
+        .upload-area:hover {
+            background: var(--light);
+            border-color: var(--secondary);
+        }
+
+        .upload-area.dragover {
+            background: var(--light);
+            border-color: var(--success);
+        }
+
+        .upload-area p {
+            margin: 8px 0;
+            color: #64748b;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            background: var(--light);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .file-info strong {
+            color: var(--success);
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0f2844;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--light);
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+
+        .preview-table th {
+            background: var(--primary);
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .preview-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-table tr:hover {
+            background: var(--light);
+        }
+
+        .success-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: var(--success);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Contai-Ilimitada Planos</h1>
+            <p>Convierte archivos de Balance y Ventas a formato Contai-Ilimitada</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="grid-2">
+            <!-- Balance de Prueba -->
+            <div class="card">
+                <h2>📋 Balance de Prueba</h2>
+                <div class="upload-area" id="balance-upload" ondrop="handleDrop(event, 'balance')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <p>📁</p>
+                    <p style="font-weight: 600;">Arrastra Balance aquí</p>
+                    <p style="font-size: 12px;">o haz clic para seleccionar</p>
+                </div>
+                <input type="file" id="balance-file" class="file-input" accept=".xlsx,.xls" onchange="handleFileSelect('balance')">
+                <div id="balance-info" class="file-info" style="display: none;"></div>
+            </div>
+
+            <!-- Plano de Ventas -->
+            <div class="card">
+                <h2>💳 Plano de Ventas</h2>
+                <div class="upload-area" id="ventas-upload" ondrop="handleDrop(event, 'ventas')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <p>📁</p>
+                    <p style="font-weight: 600;">Arrastra Ventas aquí</p>
+                    <p style="font-size: 12px;">o haz clic para seleccionar</p>
+                </div>
+                <input type="file" id="ventas-file" class="file-input" accept=".xlsx,.xls" onchange="handleFileSelect('ventas')">
+                <div id="ventas-info" class="file-info" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Estado de validación -->
+        <div class="card" style="display: none;" id="validation-card">
+            <h2>✓ Archivos Validados</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="balance-rows">0</div>
+                    <div class="stat-label">Filas Balance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="ventas-rows">0</div>
+                    <div class="stat-label">Filas Ventas</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="generarPlanoContai()">
+                    🚀 Generar Plano Contai
+                </button>
+                <button class="btn btn-secondary" onclick="generarBalanceFormato()">
+                    📊 Generar Balance Formateado
+                </button>
+                <button class="btn btn-danger" onclick="limpiarArchivos()">
+                    🗑️ Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Preview de datos -->
+        <div class="card" style="display: none;" id="preview-card">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('preview-ventas')">Ventas (10 primeras filas)</button>
+                <button class="tab-btn" onclick="switchTab('preview-balance')">Balance (10 primeras filas)</button>
+            </div>
+
+            <div id="preview-ventas" class="tab-content active">
+                <div style="overflow-x: auto;">
+                    <table class="preview-table" id="ventas-preview">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="preview-balance" class="tab-content">
+                <div style="overflow-x: auto;">
+                    <table class="preview-table" id="balance-preview">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader -->
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p style="margin-top: 12px; color: #64748b;">Procesando archivos...</p>
+        </div>
+    </div>
+
+    <script>
+        let balanceFile = null;
+        let ventasFile = null;
+        let balanceData = null;
+        let ventasData = null;
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e, type) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById(`${type}-file`).files = files;
+                handleFileSelect(type);
+            }
+        }
+
+        function handleFileSelect(type) {
+            const input = document.getElementById(`${type}-file`);
+            const file = input.files[0];
+
+            if (!file) return;
+
+            const infoDiv = document.getElementById(`${type}-info`);
+            infoDiv.innerHTML = `<strong>✓</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            infoDiv.style.display = 'block';
+
+            if (type === 'balance') {
+                balanceFile = file;
+            } else {
+                ventasFile = file;
+            }
+
+            validarArchivos();
+        }
+
+        function validarArchivos() {
+            if (!balanceFile || !ventasFile) return;
+
+            const formData = new FormData();
+            formData.append('balance', balanceFile);
+            formData.append('ventas', ventasFile);
+
+            document.getElementById('loader').classList.add('active');
+
+            fetch('/api/contai/validar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('loader').classList.remove('active');
+
+                if (data.success) {
+                    balanceData = data.balance_preview;
+                    ventasData = data.ventas_preview;
+
+                    document.getElementById('balance-rows').textContent = data.balance_count;
+                    document.getElementById('ventas-rows').textContent = data.ventas_count;
+
+                    mostrarPreviews();
+                    document.getElementById('validation-card').style.display = 'block';
+                    document.getElementById('preview-card').style.display = 'block';
+
+                    showAlert('✓ Archivos validados correctamente', 'success');
+                } else {
+                    showAlert(data.error || 'Error validando archivos', 'error');
+                }
+            })
+            .catch(e => {
+                document.getElementById('loader').classList.remove('active');
+                showAlert(`Error: ${e.message}`, 'error');
+            });
+        }
+
+        function mostrarPreviews() {
+            // Ventas
+            if (ventasData && ventasData.length > 0) {
+                const ventasTable = document.getElementById('ventas-preview');
+                const headers = Object.keys(ventasData[0]);
+
+                let thead = '<tr>';
+                headers.forEach(h => {
+                    thead += `<th>${h}</th>`;
+                });
+                thead += '</tr>';
+                ventasTable.querySelector('thead').innerHTML = thead;
+
+                let tbody = '';
+                ventasData.slice(0, 10).forEach(row => {
+                    tbody += '<tr>';
+                    headers.forEach(h => {
+                        tbody += `<td>${row[h] || ''}</td>`;
+                    });
+                    tbody += '</tr>';
+                });
+                ventasTable.querySelector('tbody').innerHTML = tbody;
+            }
+
+            // Balance
+            if (balanceData && balanceData.length > 0) {
+                const balanceTable = document.getElementById('balance-preview');
+                const headers = Object.keys(balanceData[0]);
+
+                let thead = '<tr>';
+                headers.forEach(h => {
+                    thead += `<th>${h}</th>`;
+                });
+                thead += '</tr>';
+                balanceTable.querySelector('thead').innerHTML = thead;
+
+                let tbody = '';
+                balanceData.slice(0, 10).forEach(row => {
+                    tbody += '<tr>';
+                    headers.forEach(h => {
+                        tbody += `<td>${row[h] || ''}</td>`;
+                    });
+                    tbody += '</tr>';
+                });
+                balanceTable.querySelector('tbody').innerHTML = tbody;
+            }
+        }
+
+        function generarPlanoContai() {
+            if (!balanceFile || !ventasFile) {
+                showAlert('Por favor selecciona ambos archivos', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('balance', balanceFile);
+            formData.append('ventas', ventasFile);
+
+            document.getElementById('loader').classList.add('active');
+
+            fetch('/api/contai/generar-plano', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => {
+                if (r.ok) {
+                    return r.blob().then(blob => ({blob, filename: 'plano_contai.xlsx'}));
+                }
+                return r.json().then(data => {
+                    throw new Error(data.error || 'Error generando plano');
+                });
+            })
+            .then(({blob, filename}) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                document.getElementById('loader').classList.remove('active');
+                showAlert('✓ Plano Contai descargado correctamente', 'success');
+            })
+            .catch(e => {
+                document.getElementById('loader').classList.remove('active');
+                showAlert(`Error: ${e.message}`, 'error');
+            });
+        }
+
+        function generarBalanceFormato() {
+            if (!balanceFile) {
+                showAlert('Por favor selecciona el Balance', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('balance', balanceFile);
+
+            document.getElementById('loader').classList.add('active');
+
+            fetch('/api/contai/generar-balance', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => {
+                if (r.ok) {
+                    return r.blob().then(blob => ({blob, filename: 'balance_formateado.xlsx'}));
+                }
+                return r.json().then(data => {
+                    throw new Error(data.error || 'Error generando balance');
+                });
+            })
+            .then(({blob, filename}) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                document.getElementById('loader').classList.remove('active');
+                showAlert('✓ Balance formateado descargado correctamente', 'success');
+            })
+            .catch(e => {
+                document.getElementById('loader').classList.remove('active');
+                showAlert(`Error: ${e.message}`, 'error');
+            });
+        }
+
+        function limpiarArchivos() {
+            balanceFile = null;
+            ventasFile = null;
+            balanceData = null;
+            ventasData = null;
+
+            document.getElementById('balance-file').value = '';
+            document.getElementById('ventas-file').value = '';
+            document.getElementById('balance-info').style.display = 'none';
+            document.getElementById('ventas-info').style.display = 'none';
+            document.getElementById('validation-card').style.display = 'none';
+            document.getElementById('preview-card').style.display = 'none';
+            document.getElementById('alerts').innerHTML = '';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showAlert(msg, type) {
+            const container = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = msg;
+            container.appendChild(alert);
+
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        // Click en upload areas
+        document.getElementById('balance-upload').onclick = () => document.getElementById('balance-file').click();
+        document.getElementById('ventas-upload').onclick = () => document.getElementById('ventas-file').click();
+    </script>
+</body>
+</html>
