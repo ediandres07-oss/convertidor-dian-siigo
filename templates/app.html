@@ -452,22 +452,17 @@
             left: 70px;
         }
 
-        .content {
+        .main {
             transition: margin-left 0.3s;
         }
 
-        .sidebar.collapsed ~ .content {
-            margin-left: 60px;
+        .sidebar.collapsed ~ .main {
+            margin-left: 90px;
         }
 
         </style>
 </head>
 <body>
-        <!-- LOGOUT BUTTON -->
-        <button onclick="logout()" style="position: fixed; top: 20px; right: 20px; background: #dc2626; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; z-index: 999; font-size: 14px;">
-            🚪 Logout
-        </button>
-
         <script>
         function logout() {
             if (confirm('¿Cerrar sesión?')) {
@@ -543,43 +538,43 @@
         </div>
         <ul class="menu">
             <li class="menu-item">
-                <div class="menu-link active" onclick="showSection('inicio')">
-                    🏠 Inicio
+                <div class="menu-link active" onclick="showSection('inicio')" title="Inicio">
+                    🏠 <span>Inicio</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('convertidor')">
-                    🔄 Convertidor
+                <div class="menu-link" onclick="showSection('convertidor')" title="Convertidor">
+                    🔄 <span>Convertidor</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('descargas')">
-                    📥 Descargas
+                <div class="menu-link" onclick="showSection('descargas')" title="Descargas">
+                    📥 <span>Descargas</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('balance')">
-                    📊 Balance
+                <div class="menu-link" onclick="showSection('balance')" title="Balance">
+                    📊 <span>Balance</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('liquidacion')">
-                    💼 Liquidación
+                <div class="menu-link" onclick="showSection('liquidacion')" title="Liquidación">
+                    💼 <span>Liquidación</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('siigo')">
-                    🚀 Siigo
+                <div class="menu-link" onclick="showSection('siigo')" title="Siigo">
+                    🚀 <span>Siigo</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('retenciones')">
-                    💰 Retenciones
+                <div class="menu-link" onclick="showSection('retenciones')" title="Retenciones">
+                    💰 <span>Retenciones</span>
                 </div>
             </li>
             <li class="menu-item">
-                <div class="menu-link" onclick="showSection('configuracion')">
-                    ⚙️ Configuración
+                <div class="menu-link" onclick="showSection('configuracion')" title="Configuración">
+                    ⚙️ <span>Configuración</span>
                 </div>
             </li>
         </ul>
@@ -603,6 +598,9 @@
                 </button>
                 <button class="btn btn-primary" onclick="showSection('ayuda')">
                     ❓ Ayuda
+                </button>
+                <button class="btn" style="background: var(--danger); color: white;" onclick="logout()">
+                    🚪 Salir
                 </button>
             </div>
         </div>
@@ -781,8 +779,35 @@
                     </div>
 
                     <button class="btn btn-primary" onclick="calcularLiquidacionCST()" style="width: 100%; padding: 12px; font-size: 16px;">🧮 Calcular Liquidación</button>
-                    
+
                     <div id="liq-resultado" style="margin-top: 20px; padding: 20px; background: #f0f9ff; border-radius: 6px; display: none;"></div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Liquidaciones desde Excel (con PDF)</h3>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">🏢 Nombre Empresa:</label>
+                        <input type="text" id="liq-empresa" placeholder="Mi Empresa S.A.S" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">📝 NIT Empresa:</label>
+                        <input type="text" id="liq-nit" placeholder="900123456-7" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                        <button class="btn btn-primary" onclick="validarLiquidacion()" style="padding: 12px; font-size: 16px;">✓ Validar Excel</button>
+                        <button class="btn btn-primary" onclick="cargarEmpleados()" style="padding: 12px; font-size: 16px;">👥 Cargar Empleados</button>
+                        <button class="btn btn-primary" onclick="descargarTodosPDF()" style="padding: 12px; font-size: 16px;">📥 Descargar PDFs</button>
+                    </div>
+
+                    <div id="liq-empleados" style="display: none; background: white; border-radius: 8px; padding: 20px; border: 1px solid var(--border); margin-top: 20px;">
+                        <h3 style="margin-bottom: 15px;">Empleados encontrados:</h3>
+                        <div id="liq-lista-empleados" style="max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div id="liq-mensaje" style="display: none; margin-top: 20px; padding: 15px; border-radius: 8px; border-left: 4px solid #059669; background: rgba(5, 150, 105, 0.1);"></div>
                 </div>
             </div>
         </div>
@@ -1916,33 +1941,6 @@
         }
 
 </script>
-
-        <!-- LIQUIDACIONES NUEVA -->
-        <div style="margin-bottom: 16px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">🏢 Nombre Empresa:</label>
-                        <input type="text" id="liq-empresa" placeholder="Mi Empresa S.A.S" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 6px;">📝 NIT Empresa:</label>
-                        <input type="text" id="liq-nit" placeholder="900123456-7" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;">
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                        <button class="btn btn-primary" onclick="validarLiquidacion()" style="padding: 12px; font-size: 16px;">✓ Validar Excel</button>
-                        <button class="btn btn-primary" onclick="cargarEmpleados()" style="padding: 12px; font-size: 16px;">👥 Cargar Empleados</button>
-                        <button class="btn btn-primary" onclick="descargarTodosPDF()" style="padding: 12px; font-size: 16px;">📥 Descargar PDFs</button>
-                    </div>
-                </div>
-
-                <div id="liq-empleados" style="display: none; background: white; border-radius: 8px; padding: 20px; border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 15px;">Empleados encontrados:</h3>
-                    <div id="liq-lista-empleados" style="max-height: 400px; overflow-y: auto;"></div>
-                </div>
-
-                <div id="liq-mensaje" style="display: none; margin-top: 20px; padding: 15px; border-radius: 8px; border-left: 4px solid #059669; background: rgba(5, 150, 105, 0.1);"></div>
-            </div>
-        </div>
 
 </body>
 </html>
