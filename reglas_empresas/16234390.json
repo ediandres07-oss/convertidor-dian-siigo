@@ -1,0 +1,13 @@
+{
+  "empresa": "OSCAR DE JESUS GALLEGO",
+  "nit_empresa": "16234390",
+  "_nota": "Cuentas contables PENDIENTES de confirmar contra el balance de prueba real de esta empresa. NO usar las de INVERPLAS.",
+  "reglas_nit": {},
+  "reglas_keyword": [],
+  "cuenta_default_gasto": null,
+  "cuenta_compras_mercancia": null,
+  "cuenta_proveedores": null,
+  "cuenta_iva_descontable": null,
+  "cuenta_dev_compras": null,
+  "tipo_default_recibidos": "gasto"
+}

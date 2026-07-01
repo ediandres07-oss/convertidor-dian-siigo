@@ -1,0 +1,564 @@
+{
+  "empresa": "INVERPLAS DC S.A.S.",
+  "nit_empresa": "900762375",
+  "reglas_nit": {
+    "1006183536": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "1006407425": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "1039687512": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "1040380492": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "1045427914": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "1077443232": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "1077466134": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "1077467668": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "1088278023": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "1088339733": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "10951499": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "1128433761": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "1152199201": {
+      "cuenta": "519530",
+      "tipo": "gasto"
+    },
+    "15382292": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "15406177": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "15539050": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "16218190": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "16545283": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "16836632": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "21894689": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "22209945": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "28487420": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "30230403": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "32560415": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "3510148": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "39159110": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "39272833": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "42941648": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "43117093": {
+      "cuenta": "513515",
+      "tipo": "gasto"
+    },
+    "4334595": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "4336902": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "43604113": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "70086751": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "70104335": {
+      "cuenta": "519530",
+      "tipo": "gasto"
+    },
+    "70256801": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "70422386": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "70431382": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "70563424": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "70780666": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "71182213": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "71186238": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "71270982": {
+      "cuenta": "513515",
+      "tipo": "gasto"
+    },
+    "71364242": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "71364298": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "71526179": {
+      "cuenta": "512010",
+      "tipo": "gasto"
+    },
+    "71725033": {
+      "cuenta": "513520",
+      "tipo": "gasto"
+    },
+    "800144355": {
+      "cuenta": "513505",
+      "tipo": "gasto"
+    },
+    "800147567": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "800153993": {
+      "cuenta": "513535",
+      "tipo": "gasto"
+    },
+    "800224808": {
+      "cuenta": "530515",
+      "tipo": "gasto"
+    },
+    "800227940": {
+      "cuenta": "530515",
+      "tipo": "gasto"
+    },
+    "800229739": {
+      "cuenta": "530515",
+      "tipo": "gasto"
+    },
+    "8014460": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "80185305": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "8033607": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "805007404": {
+      "cuenta": "514515",
+      "tipo": "gasto"
+    },
+    "8075447": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "811009788": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "811012427": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "811015158": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "811023184": {
+      "cuenta": "514540",
+      "tipo": "gasto"
+    },
+    "8203596": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "82361768": {
+      "cuenta": "515505",
+      "tipo": "gasto"
+    },
+    "830045034": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "8338163": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "8345227": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "8416813": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "860032550": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "86004058": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "860519235": {
+      "cuenta": "513005",
+      "tipo": "gasto"
+    },
+    "88248613": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "890200928": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "890302988": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "890900608": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "890900652": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "890900841": {
+      "cuenta": "530515",
+      "tipo": "gasto"
+    },
+    "890901491": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "890902760": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "890902872": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "890903407": {
+      "cuenta": "513005",
+      "tipo": "gasto"
+    },
+    "890905080": {
+      "cuenta": "514010",
+      "tipo": "gasto"
+    },
+    "890905211": {
+      "cuenta": "511505",
+      "tipo": "gasto"
+    },
+    "890905680": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "890910715": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "890913059": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "890913987": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "890914605": {
+      "cuenta": "515520",
+      "tipo": "gasto"
+    },
+    "891408584": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "891408635": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "899999143": {
+      "cuenta": "515515",
+      "tipo": "gasto"
+    },
+    "900088915": {
+      "cuenta": "515515",
+      "tipo": "gasto"
+    },
+    "900092385": {
+      "cuenta": "513545",
+      "tipo": "gasto"
+    },
+    "900098849": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900131632": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900207854": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "900319753": {
+      "cuenta": "514015",
+      "tipo": "gasto"
+    },
+    "900392554": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "900403670": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "900425161": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900438898": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900524178": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900598444": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "900626095": {
+      "cuenta": "515015",
+      "tipo": "gasto"
+    },
+    "900947532": {
+      "cuenta": "513520",
+      "tipo": "gasto"
+    },
+    "901032147": {
+      "cuenta": "514540",
+      "tipo": "gasto"
+    },
+    "901038738": {
+      "cuenta": "512510",
+      "tipo": "gasto"
+    },
+    "901073417": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "901177347": {
+      "cuenta": "519560",
+      "tipo": "gasto"
+    },
+    "901302544": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "901304335": {
+      "cuenta": "519535",
+      "tipo": "gasto"
+    },
+    "901323819": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "901725166": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "901929691": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "901975074": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "98475267": {
+      "cuenta": "530535",
+      "tipo": "gasto"
+    },
+    "98627391": {
+      "cuenta": "514540",
+      "tipo": "gasto"
+    },
+    "98636248": {
+      "cuenta": "511030",
+      "tipo": "gasto"
+    },
+    "98637173": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "98643736": {
+      "cuenta": "513550",
+      "tipo": "gasto"
+    },
+    "901870310": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "900276962": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "890904996": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "35589143": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "900854874": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "800242106": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "900461512": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "71798765": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "71703542": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "901300741": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "811044263": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "900480569": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "890902878": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "900219834": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    },
+    "890935774": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "ambiguo en balance original, revisar"
+    }
+  },
+  "reglas_keyword": [],
+  "cuenta_default_gasto": "5195",
+  "cuenta_compras_mercancia": "143504",
+  "cuenta_proveedores": "220505",
+  "cuenta_iva_descontable": "240802",
+  "cuenta_dev_compras": "143521",
+  "tipo_default_recibidos": "compra"
+}
