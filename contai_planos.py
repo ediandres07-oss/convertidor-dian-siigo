@@ -41,18 +41,21 @@ CTA_DEV_VENTAS_5  = '417503'   # Devolución en ventas 5%
 CTA_IVA_DEV    = '24080207'    # IVA en devoluciones (19% y 5%: no hay cuenta
                                # separada confirmada para 5%, se reutiliza esta)
 
-COMP_VENTA   = 4               # Comprobante de venta
-COMP_DEVOL   = 16              # Comprobante de devolución (NC ventas)
-COMP_COMPRA  = 1               # Comprobante de compra
-COMP_NC_COMPRA = 2             # Comprobante de NC de compra
-COMP_GASTO   = 12              # Comprobante de gasto/servicio
+# Comprobantes oficiales de INVERPLAS (Listado de Comprobantes, Jun-30-2026).
+# Ver [[project-comprobantes-inverplas]] en memoria — no se han confirmado
+# aún para otras empresas, cada una debería traer su propio listado.
+COMP_VENTA   = 4               # 00004 VENTAS
+COMP_DEVOL   = 16              # 00016 NOTA CREDITO VENTAS
+COMP_COMPRA  = 3               # 00003 COMPRAS
+COMP_NC_COMPRA = 15            # 00015 NOTA CREDITO COMPRAS
+COMP_GASTO   = 12              # 00012 EGRESOS GASTOS
 
 TIPO_DEBITO  = 1
 TIPO_CREDITO = 2
 
 HEADERS_CONTAI = [
     'Cuenta', 'Comprobante', 'Fecha(mm/dd/yyyy)', 'Comprobante', 'Documento Ref.',
-    'Nit', 'Detalle', 'Tipo', 'VALORES', 'BASE', 'Centro de Costo',
+    'Nit', 'Nombre', 'Detalle', 'Tipo', 'VALORES', 'BASE', 'Centro de Costo',
     'Trans. Ext', 'Plazo'
 ]
 
@@ -75,11 +78,11 @@ def _fmt_fecha(val):
         return str(val) if val is not None else ''
 
 
-def _fila_contai(cuenta, comp, fecha, folio, nit, detalle, tipo, valores, base=None):
-    """Construye una fila del plano Contai (13 columnas)."""
+def _fila_contai(cuenta, comp, fecha, folio, nit, nombre, detalle, tipo, valores, base=None):
+    """Construye una fila del plano Contai (14 columnas: Nombre va después de Nit)."""
     return [
         cuenta, comp, fecha, folio, folio,
-        str(nit) if nit else None, detalle, tipo, round(valores, 2),
+        str(nit) if nit else None, nombre or '', detalle, tipo, round(valores, 2),
         round(base, 2) if base is not None else None,
         None, None, None
     ]
@@ -99,8 +102,8 @@ def _escribir_fila(ws, row_idx, fila):
     for col, val in enumerate(fila, 1):
         cell = ws.cell(row=row_idx, column=col, value=val)
         cell.border = _THIN_BORDER
-        # Formato numérico para VALORES (col 9) y BASE (col 10)
-        if col in (9, 10) and isinstance(val, (int, float)):
+        # Formato numérico para VALORES (col 10) y BASE (col 11)
+        if col in (10, 11) and isinstance(val, (int, float)):
             cell.number_format = '#,##0.00'
 
 
@@ -136,6 +139,7 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
         fecha  = _fmt_fecha(v['fecha'])
         folio  = v['folio']
         nit    = v['nit']
+        nombre = v['nombre']
         base   = v['gravado']
         iva    = v['iva']
         total  = v['total']
@@ -143,20 +147,20 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
 
         # Ingreso (crédito): no gravado, 19% o 5% según la tarifa efectiva
         _escribir_fila(ws, row_idx, _fila_contai(
-            cta_ingreso, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+            cta_ingreso, COMP_VENTA, fecha, folio, nit, nombre, 'VENTAS',
             TIPO_CREDITO, base))
         row_idx += 1
 
         # IVA generado (crédito) — solo si la factura tiene IVA
         if cta_iva and abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                cta_iva, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+                cta_iva, COMP_VENTA, fecha, folio, nit, nombre, 'VENTAS',
                 TIPO_CREDITO, iva, base=base))
             row_idx += 1
 
         # Clientes / CxC (débito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            CTA_CLIENTES, COMP_VENTA, fecha, folio, nit, 'VENTAS',
+            CTA_CLIENTES, COMP_VENTA, fecha, folio, nit, nombre, 'VENTAS',
             TIPO_DEBITO, total))
         row_idx += 1
 
@@ -167,6 +171,7 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
         fecha  = _fmt_fecha(nc['fecha'])
         folio  = nc['folio']
         nit    = nc['nit']
+        nombre = nc['nombre']
         base   = nc['gravado']
         iva    = nc['iva']
         total  = nc['total']
@@ -178,20 +183,20 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
 
         # Devolución en ventas (débito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            cta_dev, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+            cta_dev, COMP_DEVOL, fecha, folio, nit, nombre, 'DEV. VENTAS',
             TIPO_DEBITO, base))
         row_idx += 1
 
         # IVA en devoluciones (débito) — solo si hay IVA
         if cta_iva and abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                CTA_IVA_DEV, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+                CTA_IVA_DEV, COMP_DEVOL, fecha, folio, nit, nombre, 'DEV. VENTAS',
                 TIPO_DEBITO, iva, base=base))
             row_idx += 1
 
         # Clientes / CxC (crédito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            CTA_CLIENTES, COMP_DEVOL, fecha, folio, nit, 'DEV. VENTAS',
+            CTA_CLIENTES, COMP_DEVOL, fecha, folio, nit, nombre, 'DEV. VENTAS',
             TIPO_CREDITO, total))
         row_idx += 1
 
@@ -230,6 +235,7 @@ def _escribir_compras(ws, row_idx, compras, cuentas):
         fecha  = _fmt_fecha(c['fecha'])
         folio  = c['folio']
         nit    = c['nit']
+        nombre = c['nombre']
         base   = c['gravado']
         iva    = c['iva']
         total  = c['total']
@@ -238,20 +244,20 @@ def _escribir_compras(ws, row_idx, compras, cuentas):
 
         # Compras gravadas o no gravadas (débito), según tarifa efectiva
         _escribir_fila(ws, row_idx, _fila_contai(
-            cta_compra, COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+            cta_compra, COMP_COMPRA, fecha, folio, nit, nombre, 'COMPRAS',
             TIPO_DEBITO, base))
         row_idx += 1
 
         # IVA descontable (débito) — solo si hay IVA
         if abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                cuentas['cuenta_iva_descontable'], COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+                cuentas['cuenta_iva_descontable'], COMP_COMPRA, fecha, folio, nit, nombre, 'COMPRAS',
                 TIPO_DEBITO, iva, base=base))
             row_idx += 1
 
         # Proveedores / CxP (crédito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuentas['cuenta_proveedores'], COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+            cuentas['cuenta_proveedores'], COMP_COMPRA, fecha, folio, nit, nombre, 'COMPRAS',
             TIPO_CREDITO, total))
         row_idx += 1
 
@@ -267,6 +273,7 @@ def _escribir_nc_compras(ws, row_idx, nc_compras, cuentas):
         fecha  = _fmt_fecha(nc['fecha'])
         folio  = nc['folio']
         nit    = nc['nit']
+        nombre = nc['nombre']
         base   = nc['gravado']
         iva    = nc['iva']
         total  = nc['total']
@@ -275,20 +282,20 @@ def _escribir_nc_compras(ws, row_idx, nc_compras, cuentas):
 
         # Devolución en compras (crédito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            cta_dev, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+            cta_dev, COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. COMPRAS',
             TIPO_CREDITO, base))
         row_idx += 1
 
         # IVA descontable en devolución (crédito) — solo si hay IVA
         if abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                cuentas['cuenta_iva_descontable'], COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+                cuentas['cuenta_iva_descontable'], COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. COMPRAS',
                 TIPO_CREDITO, iva, base=base))
             row_idx += 1
 
         # Proveedores / CxP (débito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuentas['cuenta_proveedores'], COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+            cuentas['cuenta_proveedores'], COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. COMPRAS',
             TIPO_DEBITO, total))
         row_idx += 1
 
@@ -345,6 +352,7 @@ def _escribir_nc_gastos(ws, row_idx, nc_gastos, cuenta_iva_descontable, cuenta_p
         fecha  = _fmt_fecha(nc['fecha'])
         folio  = nc['folio']
         nit    = nc['nit']
+        nombre = nc['nombre']
         base   = nc['gravado']
         iva    = nc['iva']
         total  = nc['total']
@@ -352,20 +360,20 @@ def _escribir_nc_gastos(ws, row_idx, nc_gastos, cuenta_iva_descontable, cuenta_p
 
         # Reverso de la cuenta de gasto (crédito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuenta_gasto, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. GASTOS',
+            cuenta_gasto, COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. GASTOS',
             TIPO_CREDITO, base))
         row_idx += 1
 
         # Reverso IVA descontable (crédito) — solo si hay IVA
         if abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                cuenta_iva_descontable, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. GASTOS',
+                cuenta_iva_descontable, COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. GASTOS',
                 TIPO_CREDITO, iva, base=base))
             row_idx += 1
 
         # Proveedores / CxP (débito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuenta_proveedores, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. GASTOS',
+            cuenta_proveedores, COMP_NC_COMPRA, fecha, folio, nit, nombre, 'DEV. GASTOS',
             TIPO_DEBITO, total))
         row_idx += 1
 
@@ -381,6 +389,7 @@ def _escribir_gastos(ws, row_idx, gastos, cuenta_iva_descontable, cuenta_proveed
         fecha  = _fmt_fecha(g['fecha'])
         folio  = g['folio']
         nit    = g['nit']
+        nombre = g['nombre']
         base   = g['gravado']
         iva    = g['iva']
         total  = g['total']
@@ -388,20 +397,20 @@ def _escribir_gastos(ws, row_idx, gastos, cuenta_iva_descontable, cuenta_proveed
 
         # Cuenta de gasto (débito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuenta_gasto, COMP_GASTO, fecha, folio, nit, 'GASTOS',
+            cuenta_gasto, COMP_GASTO, fecha, folio, nit, nombre, 'GASTOS',
             TIPO_DEBITO, base))
         row_idx += 1
 
         # IVA descontable (débito) — solo si hay IVA
         if abs(iva) > 0.01:
             _escribir_fila(ws, row_idx, _fila_contai(
-                cuenta_iva_descontable, COMP_GASTO, fecha, folio, nit, 'GASTOS',
+                cuenta_iva_descontable, COMP_GASTO, fecha, folio, nit, nombre, 'GASTOS',
                 TIPO_DEBITO, iva, base=base))
             row_idx += 1
 
         # Proveedores / CxP (crédito) por el total
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuenta_proveedores, COMP_GASTO, fecha, folio, nit, 'GASTOS',
+            cuenta_proveedores, COMP_GASTO, fecha, folio, nit, nombre, 'GASTOS',
             TIPO_CREDITO, total))
         row_idx += 1
 
@@ -461,7 +470,7 @@ def generar_plano_contai_completo(input_stream, incluir=('ventas', 'compras', 'n
                                        cuentas['cuenta_iva_descontable'], cuentas['cuenta_proveedores'])
 
     # Ajustar ancho de columnas
-    anchos = [10, 12, 16, 12, 14, 14, 14, 6, 14, 14, 14, 12, 8]
+    anchos = [10, 12, 16, 12, 14, 14, 24, 14, 6, 14, 14, 14, 12, 8]
     for col_idx, ancho in enumerate(anchos, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = ancho
 
