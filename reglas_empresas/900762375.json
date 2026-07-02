@@ -556,9 +556,10 @@
   },
   "reglas_keyword": [],
   "cuenta_default_gasto": "5195",
-  "cuenta_compras_mercancia": "143504",
   "cuenta_proveedores": "220505",
   "cuenta_iva_descontable": "240802",
-  "cuenta_dev_compras": "143521",
-  "tipo_default_recibidos": "compra"
+  "tipo_default_recibidos": "compra",
+  "cuenta_compras_19": "143504",
+  "cuenta_compras_5": "143505",
+  "cuenta_dev_compras_19": "143521"
 }

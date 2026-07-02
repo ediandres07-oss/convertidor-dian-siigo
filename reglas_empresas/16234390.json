@@ -1,13 +1,72 @@
 {
   "empresa": "OSCAR DE JESUS GALLEGO",
   "nit_empresa": "16234390",
-  "_nota": "Cuentas contables PENDIENTES de confirmar contra el balance de prueba real de esta empresa. NO usar las de INVERPLAS.",
-  "reglas_nit": {},
-  "reglas_keyword": [],
-  "cuenta_default_gasto": null,
-  "cuenta_compras_mercancia": null,
-  "cuenta_proveedores": null,
-  "cuenta_iva_descontable": null,
-  "cuenta_dev_compras": null,
-  "tipo_default_recibidos": "gasto"
+  "tipo_default_recibidos": "compra",
+  "cuenta_default_gasto": "5195",
+  "cuenta_proveedores": "220505",
+  "cuenta_iva_descontable": "240802",
+  "cuenta_compras_0": "143503",
+  "cuenta_compras_5": "143505",
+  "cuenta_compras_19": "143508",
+  "cuenta_dev_compras_0": "143510",
+  "cuenta_dev_compras_5": "143515",
+  "cuenta_dev_compras_19": "143525",
+  "reglas_nit": {
+    "800088702": {
+      "cuenta": "510569",
+      "tipo": "gasto",
+      "notas": "Aportes EPS - Suramericana de Servicios"
+    },
+    "800229739": {
+      "cuenta": "510570",
+      "tipo": "gasto",
+      "notas": "Aportes Pension - Proteccion"
+    },
+    "890907752": {
+      "cuenta": "512010",
+      "tipo": "gasto",
+      "notas": "Arrendamiento local"
+    },
+    "811008426": {
+      "cuenta": "513525",
+      "tipo": "gasto",
+      "notas": "Acueducto y alcantarillado"
+    },
+    "800153993": {
+      "cuenta": "513535",
+      "tipo": "gasto",
+      "notas": "Telecomunicaciones - Comcel"
+    },
+    "901354361": {
+      "cuenta": "513535",
+      "tipo": "gasto",
+      "notas": "Telecomunicaciones - Partners Telecom"
+    },
+    "901396881": {
+      "cuenta": "513535",
+      "tipo": "gasto",
+      "notas": "Telecomunicaciones - Starlink"
+    },
+    "900717439": {
+      "cuenta": "514515",
+      "tipo": "gasto",
+      "notas": "Mantenimiento maquinaria - K-BLES"
+    },
+    "800047781": {
+      "cuenta": "519560",
+      "tipo": "gasto",
+      "notas": "Cafeteria - Enecon"
+    },
+    "890500726": {
+      "cuenta": "519560",
+      "tipo": "gasto",
+      "notas": "Cafeteria - Colgas"
+    },
+    "890904996": {
+      "cuenta": "5195",
+      "tipo": "gasto",
+      "notas": "EPM - ambiguo en balance (513530 Energia o 513560 Otros Serv Pub), revisar"
+    }
+  },
+  "reglas_keyword": []
 }

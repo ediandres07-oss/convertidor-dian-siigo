@@ -198,8 +198,32 @@ def _escribir_ventas(ws, row_idx, ventas, nc_ventas):
     return row_idx
 
 
+def _clasificar_tarifa_compra(base, iva):
+    """
+    Igual que _clasificar_tarifa_venta pero para compras: el reporte DIAN
+    trae base e IVA por documento, así que la tarifa efectiva (iva/base) se
+    calcula por factura. Retorna '0', '5' o '19' (sufijo de la clave
+    cuenta_compras_<tarifa> / cuenta_dev_compras_<tarifa> en el JSON de
+    la empresa).
+    """
+    if abs(iva) < 0.01:
+        return '0'
+    rate = iva / base if abs(base) > 0.01 else 1.0
+    if rate < 0.12:
+        return '5'
+    return '19'
+
+
+def _cuenta_compra(cuentas, prefijo, tarifa):
+    """Busca cuentas[f'{prefijo}_{tarifa}']; si la empresa no tiene esa
+    cuenta configurada (ej. sin compras no gravadas), usa la de 19% como
+    mejor aproximación disponible — nunca deja de escribir el valor."""
+    return cuentas.get(f'{prefijo}_{tarifa}') or cuentas.get(f'{prefijo}_19')
+
+
 def _escribir_compras(ws, row_idx, compras, cuentas):
-    """Escribe las líneas de facturas de compra (mercancía/inventario)."""
+    """Escribe las líneas de facturas de compra (mercancía/inventario),
+    separadas por tarifa efectiva (no gravada/5%/19%) de cada factura."""
     for c in compras:
         if abs(c['total']) < 0.01:
             continue
@@ -209,10 +233,12 @@ def _escribir_compras(ws, row_idx, compras, cuentas):
         base   = c['gravado']
         iva    = c['iva']
         total  = c['total']
+        tarifa = _clasificar_tarifa_compra(base, iva)
+        cta_compra = _cuenta_compra(cuentas, 'cuenta_compras', tarifa)
 
-        # Compras gravadas (débito)
+        # Compras gravadas o no gravadas (débito), según tarifa efectiva
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuentas['cuenta_compras_mercancia'], COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
+            cta_compra, COMP_COMPRA, fecha, folio, nit, 'COMPRAS',
             TIPO_DEBITO, base))
         row_idx += 1
 
@@ -233,7 +259,8 @@ def _escribir_compras(ws, row_idx, compras, cuentas):
 
 
 def _escribir_nc_compras(ws, row_idx, nc_compras, cuentas):
-    """Escribe las líneas de notas crédito de compra (devoluciones a proveedor)."""
+    """Escribe las líneas de notas crédito de compra (devoluciones a proveedor),
+    separadas por tarifa efectiva igual que _escribir_compras."""
     for nc in nc_compras:
         if abs(nc['total']) < 0.01:
             continue
@@ -243,10 +270,12 @@ def _escribir_nc_compras(ws, row_idx, nc_compras, cuentas):
         base   = nc['gravado']
         iva    = nc['iva']
         total  = nc['total']
+        tarifa = _clasificar_tarifa_compra(base, iva)
+        cta_dev = _cuenta_compra(cuentas, 'cuenta_dev_compras', tarifa)
 
         # Devolución en compras (crédito)
         _escribir_fila(ws, row_idx, _fila_contai(
-            cuentas['cuenta_dev_compras'], COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
+            cta_dev, COMP_NC_COMPRA, fecha, folio, nit, 'DEV. COMPRAS',
             TIPO_CREDITO, base))
         row_idx += 1
 
@@ -396,8 +425,11 @@ def generar_plano_contai_completo(input_stream, incluir=('ventas', 'compras', 'n
     cuentas = cargar_reglas(mi_nit)
     necesita_cuentas = ('compras' in incluir or 'gastos' in incluir or 'nc_compras' in incluir)
     if necesita_cuentas:
-        faltantes = [c for c in ('cuenta_compras_mercancia', 'cuenta_proveedores',
-                                  'cuenta_iva_descontable', 'cuenta_dev_compras')
+        # Mínimo indispensable: cuenta_compras_19 y cuenta_dev_compras_19 son
+        # el fallback de cualquier tarifa no configurada explícitamente
+        # (ver _cuenta_compra), así que son las únicas realmente obligatorias.
+        faltantes = [c for c in ('cuenta_compras_19', 'cuenta_proveedores',
+                                  'cuenta_iva_descontable', 'cuenta_dev_compras_19')
                      if not cuentas.get(c)]
         if faltantes:
             raise ValueError(
